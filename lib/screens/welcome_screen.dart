@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:lovely/constants/app_colors.dart';
 import 'package:lovely/screens/auth/login.dart';
 
 class WelcomeScreen extends StatelessWidget {
@@ -49,7 +50,9 @@ class WelcomeScreen extends StatelessWidget {
                     'Welcome to Lovely',
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : const Color(0xFF1A1A1A),
+                      color: isDark
+                          ? Colors.white
+                          : AppColors.lightAppBarForeground,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -59,7 +62,7 @@ class WelcomeScreen extends StatelessWidget {
                   Text(
                     'Your journey to wellness and self-care starts here',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: isDark ? Colors.white70 : const Color(0xFF666666),
+                      color: isDark ? Colors.white70 : AppColors.textMediumGray,
                       height: 1.5,
                     ),
                     textAlign: TextAlign.center,
@@ -194,7 +197,7 @@ class WelcomeScreen extends StatelessWidget {
             child: Text(
               text,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: isDark ? Colors.white : const Color(0xFF333333),
+                color: isDark ? Colors.white : AppColors.textDarkGray,
                 fontWeight: FontWeight.w500,
               ),
             ),

@@ -8,23 +8,29 @@ Lovely is a privacy-focused wellness app that combines period tracking, task man
 
 ## Features
 
-### Implemented
+### Implemented ✅
 - **User Authentication** - Secure email/password signup and login via Supabase Auth
 - **Password Recovery** - Email-based password reset functionality
+- **Email Verification** - 7-day grace period with verification reminders
 - **Personalized Onboarding** - Collects essential cycle information during first-time setup
-- **Profile Management** - Stores user preferences and cycle data securely
+- **Profile Management** - User profile with settings and account management
+- **Period Logging** - Start/end period tracking with flow intensity
+- **Mood Tracking** - Daily mood logging with 7 emotional states
+- **Symptom Tracking** - Log 8 different symptom types
+- **Cycle Dashboard** - Visual cycle card showing current period status
+- **Responsive Design** - Adapts to different screen sizes
+- **Material Design 3** - Hybrid approach with strict usability standards
 - **Dark Mode Support** - Automatic theme switching based on system preferences
-- **Accessibility** - Built following Flutter accessibility guidelines with semantic labels
+- **Accessibility** - 48x48px touch targets, InkWell ripple effects, semantic labels
 - **Coral Sunset Theme** - Warm, feminine color palette designed for comfort
 
-### In Development
-- Calendar-based cycle tracking
-- Period predictions and insights
+### In Development 🔄
+- Calendar view with period visualization
+- Cycle predictions and insights based on historical data
 - Task management system
 - Daily affirmations
-- Symptom tracking
-- Push notifications via Firebase Cloud Messaging
 - Analytics and health trends
+- Push notifications via Firebase Cloud Messaging
 
 ## Technology Stack
 
@@ -164,20 +170,25 @@ See [SUPABASE_SETUP.md](SUPABASE_SETUP.md) for the complete schema. Main tables:
 - [x] Accessibility foundation
 
 ### Phase 2: Core Features (In Progress)
-- [ ] Calendar view for cycle tracking
-- [ ] Period start/end logging
+- [x] Database schema (periods, symptoms, moods, cycles tables)
+- [x] Data models (Period, Symptom, Mood, Cycle)
+- [x] Period start/end logging with flow intensity
+- [x] Symptom tracking interface (8 symptom types)
+- [x] Mood tracking (7 emotional states)
+- [x] Service layer methods (CRUD operations)
+- [ ] Calendar view for cycle visualization
 - [ ] Cycle predictions based on historical data
-- [ ] Symptom tracking interface
 
 ### Phase 3: Wellness Features
 - [ ] Task management system
 - [ ] Daily affirmations
-- [ ] Mood tracking
 - [ ] Reminder notifications
+- [ ] Insights and tips based on cycle phase
 
 ### Phase 4: Analytics & Insights
 - [ ] Cycle pattern analysis
 - [ ] Health trend visualization
+- [ ] Period history view
 - [ ] Data export functionality
 - [ ] Backup and sync
 

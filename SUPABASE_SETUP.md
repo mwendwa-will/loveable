@@ -74,7 +74,166 @@ CREATE TRIGGER update_users_updated_at
 
 5. Click **Run** to execute the query
 
-### Step 2: Configure Email Authentication
+### Step 2: Create Cycle Tracking Tables
+
+Copy and paste this SQL to create the period tracking, symptoms, moods, and cycles tables:
+
+```sql
+-- Create periods table (tracks individual period entries)
+CREATE TABLE IF NOT EXISTS public.periods (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    start_date DATE NOT NULL,
+    end_date DATE,
+    flow_intensity TEXT CHECK (flow_intensity IN ('light', 'medium', 'heavy')),
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create symptoms table (tracks daily symptoms)
+CREATE TABLE IF NOT EXISTS public.symptoms (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    symptom_type TEXT NOT NULL CHECK (symptom_type IN ('cramps', 'headache', 'fatigue', 'bloating', 'nausea', 'back_pain', 'breast_tenderness', 'acne')),
+    severity INTEGER CHECK (severity BETWEEN 1 AND 5),
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, date, symptom_type)
+);
+
+-- Create moods table (tracks daily mood)
+CREATE TABLE IF NOT EXISTS public.moods (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    mood_type TEXT NOT NULL CHECK (mood_type IN ('happy', 'calm', 'tired', 'sad', 'irritable', 'anxious', 'energetic')),
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, date)
+);
+
+-- Create cycles table (stores calculated cycle information)
+CREATE TABLE IF NOT EXISTS public.cycles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    cycle_number INTEGER NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE,
+    cycle_length INTEGER,
+    period_length INTEGER,
+    predicted_next_period DATE,
+    predicted_ovulation DATE,
+    predicted_fertile_window_start DATE,
+    predicted_fertile_window_end DATE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, cycle_number)
+);
+
+-- Enable Row Level Security on all tables
+ALTER TABLE public.periods ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.symptoms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.moods ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.cycles ENABLE ROW LEVEL SECURITY;
+
+-- Periods table policies
+CREATE POLICY "Users can view own periods"
+    ON public.periods FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own periods"
+    ON public.periods FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own periods"
+    ON public.periods FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own periods"
+    ON public.periods FOR DELETE
+    USING (auth.uid() = user_id);
+
+-- Symptoms table policies
+CREATE POLICY "Users can view own symptoms"
+    ON public.symptoms FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own symptoms"
+    ON public.symptoms FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own symptoms"
+    ON public.symptoms FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own symptoms"
+    ON public.symptoms FOR DELETE
+    USING (auth.uid() = user_id);
+
+-- Moods table policies
+CREATE POLICY "Users can view own moods"
+    ON public.moods FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own moods"
+    ON public.moods FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own moods"
+    ON public.moods FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own moods"
+    ON public.moods FOR DELETE
+    USING (auth.uid() = user_id);
+
+-- Cycles table policies
+CREATE POLICY "Users can view own cycles"
+    ON public.cycles FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own cycles"
+    ON public.cycles FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own cycles"
+    ON public.cycles FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own cycles"
+    ON public.cycles FOR DELETE
+    USING (auth.uid() = user_id);
+
+-- Create indexes for better query performance
+CREATE INDEX periods_user_date_idx ON public.periods(user_id, start_date DESC);
+CREATE INDEX symptoms_user_date_idx ON public.symptoms(user_id, date DESC);
+CREATE INDEX moods_user_date_idx ON public.moods(user_id, date DESC);
+CREATE INDEX cycles_user_number_idx ON public.cycles(user_id, cycle_number DESC);
+
+-- Create or replace updated_at trigger function (in case it doesn't exist)
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Create updated_at triggers
+CREATE TRIGGER update_periods_updated_at
+    BEFORE UPDATE ON public.periods
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_cycles_updated_at
+    BEFORE UPDATE ON public.cycles
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+```
+
+### Step 3: Configure Email Authentication
 
 1. In your Supabase Dashboard, go to **Authentication** → **Providers**
 2. Make sure **Email** is enabled

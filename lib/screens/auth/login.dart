@@ -1,24 +1,28 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:lovely/screens/auth/forgot_password.dart';
 import 'package:lovely/screens/auth/signup.dart';
-import 'package:lovely/services/supabase_service.dart';
+import 'package:lovely/providers/period_provider.dart';
 import 'package:lovely/screens/onboarding/onboarding_screen.dart';
+import 'package:lovely/screens/main/home_screen.dart';
+import 'package:lovely/core/feedback/feedback_service.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -29,23 +33,27 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
-      
+      setState(() {
+        _errorMessage = null; // Clear previous errors
+        _isLoading = true;
+      });
+
       try {
-        final response = await SupabaseService().signIn(
+        final supabase = ref.read(supabaseServiceProvider);
+        final response = await supabase.signIn(
           email: _emailController.text.trim(),
           password: _passwordController.text,
         );
-        
+
         if (response.session != null && mounted) {
           // Check if user has completed onboarding
-          final hasCompleted = await SupabaseService().hasCompletedOnboarding();
-          
+          final hasCompleted = await supabase.hasCompletedOnboarding();
+
           if (mounted) {
             if (hasCompleted) {
-              // TODO: Navigate to home screen when it's created
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Login successful! Home screen coming soon.')),
+              // Navigate to home screen
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const HomeScreen()),
               );
             } else {
               // Navigate to onboarding
@@ -57,12 +65,9 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Login failed: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          setState(() {
+            _errorMessage = FeedbackService.getErrorMessage(e);
+          });
         }
       } finally {
         if (mounted) {
@@ -120,6 +125,40 @@ class _LoginScreenState extends State<LoginScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 48),
+
+                  // Inline error display
+                  if (_errorMessage != null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.error.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              _errorMessage!,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
                   Semantics(
                     label: 'Email address input field',
                     textField: true,
@@ -404,7 +443,6 @@ class _SocialLoginButton extends StatelessWidget {
     );
   }
 }
-
 
 // If you want to replace the TextButtons with ElevatedButtons:
 // Replace the "Forgot Password?" TextButton (around line 156-165) with:

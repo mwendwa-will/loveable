@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:lovely/services/supabase_service.dart';
+import 'package:lovely/constants/app_colors.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -23,12 +24,29 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   Future<void> _handleResetPassword() async {
     if (_formKey.currentState!.validate()) {
+      // Check if current user is trying to reset and hasn't verified email
+      final service = SupabaseService();
+      final currentUser = service.currentUser;
+
+      if (currentUser != null &&
+          currentUser.email == _emailController.text.trim() &&
+          !service.isEmailVerified) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Please verify your email address first to enable password recovery.',
+            ),
+            backgroundColor: AppColors.warning,
+            duration: Duration(seconds: 5),
+          ),
+        );
+        return;
+      }
+
       setState(() => _isLoading = true);
 
       try {
-        await SupabaseService().resetPassword(
-          email: _emailController.text.trim(),
-        );
+        await service.resetPassword(email: _emailController.text.trim());
 
         if (mounted) {
           setState(() {
@@ -42,7 +60,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Failed to send reset email: ${e.toString()}'),
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.error,
             ),
           );
         }
@@ -222,13 +240,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.green.withValues(alpha: 0.1),
+            color: AppColors.success.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: const FaIcon(
             FontAwesomeIcons.circleCheck,
             size: 64,
-            color: Colors.green,
+            color: AppColors.success,
           ),
         ),
         const SizedBox(height: 32),

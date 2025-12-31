@@ -35,7 +35,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     try {
       // Wait a bit for auth state to settle
       await Future.delayed(const Duration(milliseconds: 100));
-      
+
       final user = SupabaseService().currentUser;
       if (user != null) {
         setState(() {
@@ -96,12 +96,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       if (user == null) {
         throw Exception('Please log in again to continue');
       }
-      
+
       // Get name from state or user metadata
-      final name = _userName.isNotEmpty 
-          ? _userName 
+      final name = _userName.isNotEmpty
+          ? _userName
           : (user.userMetadata?['name'] as String? ?? 'User');
-      
+
       // Save user data to Supabase
       await SupabaseService().saveUserData(
         name: name,
@@ -228,9 +228,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    
+
     final displayName = _userName.isNotEmpty ? _userName : 'there';
-    
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
       child: Column(
@@ -278,9 +278,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
           Text(
             'When is your birthday?',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 16),
 

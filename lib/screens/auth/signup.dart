@@ -1,18 +1,20 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:lovely/screens/auth/login.dart';
 import 'package:lovely/screens/onboarding/onboarding_screen.dart';
-import 'package:lovely/services/supabase_service.dart';
+import 'package:lovely/providers/period_provider.dart';
+import 'package:lovely/core/feedback/feedback_service.dart';
 
-class SignUpScreen extends StatefulWidget {
+class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
 
   @override
-  State<SignUpScreen> createState() => _SignUpScreenState();
+  ConsumerState<SignUpScreen> createState() => _SignUpScreenState();
 }
 
-class _SignUpScreenState extends State<SignUpScreen> {
+class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -21,6 +23,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
   bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -33,17 +36,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   Future<void> _handleSignUp() async {
     if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
-      
+      setState(() {
+        _errorMessage = null; // Clear previous errors
+        _isLoading = true;
+      });
+
       try {
-        final response = await SupabaseService().signUp(
+        final supabase = ref.read(supabaseServiceProvider);
+        final response = await supabase.signUp(
           email: _emailController.text.trim(),
           password: _passwordController.text,
-          metadata: {
-            'name': _nameController.text.trim(),
-          },
+          metadata: {'name': _nameController.text.trim()},
         );
-        
+
         if (response.user != null && mounted) {
           // Navigate to onboarding after successful signup
           Navigator.of(context).pushReplacement(
@@ -52,12 +57,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Sign up failed: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          setState(() {
+            _errorMessage = FeedbackService.getErrorMessage(e);
+          });
         }
       } finally {
         if (mounted) {
@@ -69,9 +71,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   Future<void> _handleSocialLogin(String provider) async {
     // TODO: Implement social login logic
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('$provider login coming soon')));
+    if (mounted) {
+      FeedbackService.showInfo(context, '$provider login coming soon');
+    }
   }
 
   @override
@@ -115,6 +117,39 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 32),
+
+                  // Inline error display
+                  if (_errorMessage != null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.error.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              _errorMessage!,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
 
                   // Name Field
                   Semantics(

@@ -158,11 +158,39 @@ A comprehensive women's wellness app that combines health tracking, task managem
 ## 4. Screen Architecture
 
 ### 4.1 Authentication Flow
+
+**Initial Launch:**
 ```
-Welcome Screen → Login Screen ↔ Sign Up Screen
-                ↓
-           Home Screen
+App Launch
+    → main() initializes Supabase
+    → Supabase reads encrypted tokens from device storage
+    → AuthGate checks currentSession
+    → If valid: Check onboarding status
+        → Completed: Navigate to HomeScreen
+        → Incomplete: Navigate to OnboardingScreen
+    → If expired/missing: Show WelcomeScreen for login
 ```
+
+**First-Time User:**
+```
+Welcome Screen → Sign Up Screen → Email Verification → Onboarding → Home Screen
+```
+
+**Returning User (with session):**
+```
+App Launch → AuthGate → HomeScreen (seamless, no login required)
+```
+
+**Session Expired:**
+```
+Welcome Screen → Login Screen → Home Screen
+```
+
+**Session Persistence:**
+- Tokens stored in SharedPreferences (Android) / UserDefaults (iOS)
+- Sessions survive app restarts and cache clearing
+- Sessions expire after 30 days or on explicit logout
+- Auto-refresh mechanism maintains session validity
 
 ### 4.2 Main Navigation (Bottom Tab Bar)
 1. **Home** - Dashboard with affirmation & quick stats
