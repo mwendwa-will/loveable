@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lovely/services/supabase_service.dart';
 import 'package:intl/intl.dart';
+import 'package:lovely/core/feedback/feedback_service.dart';
 
 class PregnancyModeScreen extends StatefulWidget {
   const PregnancyModeScreen({super.key});
@@ -35,9 +36,7 @@ class _PregnancyModeScreenState extends State<PregnancyModeScreen> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading pregnancy info: $e')),
-        );
+        FeedbackService.showError(context, e);
       }
     } finally {
       setState(() => _isLoading = false);
@@ -64,20 +63,16 @@ class _PregnancyModeScreenState extends State<PregnancyModeScreen> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Pregnancy mode enabled! 🎉'),
-            backgroundColor: Colors.green,
-          ),
+        FeedbackService.showSuccess(
+          context,
+          'Pregnancy mode enabled! 🎉',
         );
       }
 
       await _loadPregnancyInfo();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        FeedbackService.showError(context, e);
       }
     }
   }
@@ -109,17 +104,16 @@ class _PregnancyModeScreenState extends State<PregnancyModeScreen> {
       await _supabase.disablePregnancyMode();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Pregnancy mode disabled')),
+        FeedbackService.showSuccess(
+          context,
+          'Pregnancy mode disabled',
         );
       }
 
       await _loadPregnancyInfo();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        FeedbackService.showError(context, e);
       }
     }
   }

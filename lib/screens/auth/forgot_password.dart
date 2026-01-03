@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:lovely/services/supabase_service.dart';
 import 'package:lovely/constants/app_colors.dart';
+import 'package:lovely/core/feedback/feedback_service.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -31,14 +32,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       if (currentUser != null &&
           currentUser.email == _emailController.text.trim() &&
           !service.isEmailVerified) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Please verify your email address first to enable password recovery.',
-            ),
-            backgroundColor: AppColors.warning,
-            duration: Duration(seconds: 5),
-          ),
+        FeedbackService.showWarning(
+          context,
+          'Let\'s verify your email first to enable password recovery',
         );
         return;
       }
@@ -57,12 +53,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       } catch (e) {
         if (mounted) {
           setState(() => _isLoading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to send reset email: ${e.toString()}'),
-              backgroundColor: AppColors.error,
-            ),
-          );
+          FeedbackService.showError(context, e);
         }
       }
     }
@@ -272,7 +263,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         const SizedBox(height: 8),
 
         Text(
-          'Please check your inbox and follow the instructions to reset your password.',
+          'Check your inbox and follow the link to reset your password',
           style: Theme.of(
             context,
           ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),

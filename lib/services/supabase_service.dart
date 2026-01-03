@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 import 'package:lovely/config/supabase_config.dart';
 import 'package:lovely/models/period.dart';
@@ -9,6 +10,7 @@ import 'package:lovely/models/mood.dart';
 import 'package:lovely/models/sexual_activity.dart';
 import 'package:lovely/models/note.dart';
 import 'package:lovely/core/exceptions/app_exceptions.dart';
+import 'package:lovely/services/cycle_analyzer.dart';
 
 class SupabaseService {
   // Singleton instance
@@ -49,21 +51,59 @@ class SupabaseService {
   }
 
   bool get requiresVerification {
-    // Require verification after 7 days grace period
-    return !isEmailVerified && daysSinceSignup > 7;
+    // Require verification after 24 hours grace period
+    return !isEmailVerified && daysSinceSignup > 1;
+  }
+
+  /// Check if username is available (case-insensitive)
+  Future<bool> isUsernameAvailable(String username) async {
+    try {
+      final result = await client.rpc(
+        'is_username_available',
+        params: {'check_username': username.trim()},
+      );
+      return result as bool;
+    } catch (e) {
+      debugPrint('❌ Error checking username availability: $e');
+      // If the function doesn't exist yet, do a direct query
+      try {
+        final response = await client
+            .from('users')
+            .select('username')
+            .ilike('username', username.trim())
+            .maybeSingle();
+        return response == null;
+      } catch (e2) {
+        debugPrint('❌ Fallback username check failed: $e2');
+        return false; // Assume not available on error to be safe
+      }
+    }
   }
 
   // Sign up with email and password
   Future<AuthResponse> signUp({
     required String email,
     required String password,
+    String? username,
+    String? firstName,
+    String? lastName,
     Map<String, dynamic>? metadata,
   }) async {
     try {
+      // Merge username/names with any additional metadata
+      final combinedMetadata = <String, dynamic>{
+        ...?metadata,
+        if (username != null) 'username': username.trim(),
+        // Set username as display_name in Supabase auth
+        if (username != null) 'display_name': username.trim(),
+        if (firstName != null) 'first_name': firstName.trim(),
+        if (lastName != null) 'last_name': lastName.trim(),
+      };
+
       final response = await client.auth.signUp(
         email: email,
         password: password,
-        data: metadata,
+        data: combinedMetadata,
       );
       return response;
     } on AuthException {
@@ -89,14 +129,54 @@ class SupabaseService {
     }
   }
 
-  // Sign in with email and password
+  // Sign in with email OR username and password
   Future<AuthResponse> signIn({
-    required String email,
+    required String emailOrUsername,
     required String password,
   }) async {
     try {
+      String emailToUse = emailOrUsername.trim();
+
+      // If input doesn't contain @, it's likely a username - look up email
+      if (!emailOrUsername.contains('@')) {
+        try {
+          final result = await client.rpc(
+            'get_user_by_username_or_email',
+            params: {'identifier': emailOrUsername.trim()},
+          );
+
+          if (result != null && result is List && result.isNotEmpty) {
+            final userData = result[0] as Map<String, dynamic>;
+            emailToUse = userData['email'] as String;
+            debugPrint('✅ Found user by username: $emailOrUsername');
+          } else {
+            throw AuthException.invalidCredentials();
+          }
+        } catch (e) {
+          debugPrint('❌ Username lookup failed: $e');
+          // If RPC fails, try direct query as fallback
+          try {
+            final userRecord = await client
+                .from('users')
+                .select('email')
+                .ilike('username', emailOrUsername.trim())
+                .maybeSingle();
+
+            if (userRecord != null) {
+              emailToUse = userRecord['email'] as String;
+            } else {
+              throw AuthException.invalidCredentials();
+            }
+          } catch (e2) {
+            debugPrint('❌ Fallback username query failed: $e2');
+            throw AuthException.invalidCredentials();
+          }
+        }
+      }
+
+      // Now sign in with the email
       final response = await client.auth.signInWithPassword(
-        email: email,
+        email: emailToUse,
         password: password,
       );
 
@@ -163,7 +243,9 @@ class SupabaseService {
 
   // Update user profile
   Future<UserResponse> updateProfile({
-    required String name,
+    String? firstName,
+    String? lastName,
+    String? username,
     DateTime? dateOfBirth,
     int? averageCycleLength,
     int? averagePeriodLength,
@@ -171,7 +253,9 @@ class SupabaseService {
     bool? notificationsEnabled,
   }) async {
     final updates = <String, dynamic>{
-      if (name.isNotEmpty) 'name': name,
+      if (firstName != null && firstName.isNotEmpty) 'first_name': firstName,
+      if (lastName != null && lastName.isNotEmpty) 'last_name': lastName,
+      if (username != null && username.isNotEmpty) 'username': username,
       if (dateOfBirth != null) 'date_of_birth': dateOfBirth.toIso8601String(),
       if (averageCycleLength != null)
         'average_cycle_length': averageCycleLength,
@@ -186,9 +270,27 @@ class SupabaseService {
     return await client.auth.updateUser(UserAttributes(data: updates));
   }
 
+  /// Update user password
+  Future<void> updatePassword(String newPassword) async {
+    final user = currentUser;
+    if (user == null) throw AuthException.sessionExpired();
+
+    try {
+      await client.auth.updateUser(
+        UserAttributes(password: newPassword),
+      );
+      debugPrint('✅ Password updated successfully');
+    } catch (e) {
+      debugPrint('❌ Error updating password: $e');
+      rethrow;
+    }
+  }
+
   // Save user data to database (called after onboarding)
   Future<void> saveUserData({
-    required String name,
+    String? firstName,
+    String? lastName,
+    String? username,
     DateTime? dateOfBirth,
     int? averageCycleLength,
     int? averagePeriodLength,
@@ -196,12 +298,23 @@ class SupabaseService {
     bool? notificationsEnabled,
   }) async {
     final user = currentUser;
-    if (user == null) throw Exception('No authenticated user');
+    if (user == null) throw AuthException.sessionExpired();
+
+    // Create combined name for backward compatibility with 'name' column
+    String? fullName;
+    if (firstName != null) {
+      fullName = lastName != null && lastName.isNotEmpty 
+          ? '$firstName $lastName' 
+          : firstName;
+    }
 
     await client.from('users').upsert({
       'id': user.id,
       'email': user.email,
-      'name': name,
+      if (fullName != null) 'name': fullName,
+      if (firstName != null) 'first_name': firstName,
+      if (lastName != null) 'last_name': lastName,
+      if (username != null) 'username': username,
       'date_of_birth': dateOfBirth?.toIso8601String(),
       'average_cycle_length': averageCycleLength ?? 28,
       'average_period_length': averagePeriodLength ?? 5,
@@ -209,6 +322,23 @@ class SupabaseService {
       'notifications_enabled': notificationsEnabled ?? true,
       'updated_at': DateTime.now().toIso8601String(),
     });
+
+    // If lastPeriodStart is provided during onboarding, create a period record
+    // This ensures the calendar shows the period correctly for new users
+    if (lastPeriodStart != null) {
+      // Check if a period already exists for this date
+      final existingPeriod = await client
+          .from('periods')
+          .select()
+          .eq('user_id', user.id)
+          .eq('start_date', lastPeriodStart.toIso8601String())
+          .maybeSingle();
+
+      // Only create if it doesn't exist
+      if (existingPeriod == null) {
+        await startPeriod(startDate: lastPeriodStart);
+      }
+    }
   }
 
   // Get user data from database
@@ -226,21 +356,159 @@ class SupabaseService {
   }
 
   // Check if user has completed onboarding
+  // Onboarding is complete when user has saved their cycle preferences
+  // Names are optional and can be added later in profile settings
   Future<bool> hasCompletedOnboarding() async {
     final userData = await getUserData();
-    return userData?['name'] != null && userData?['date_of_birth'] != null;
+    // Check if user exists in database (means onboarding was completed)
+    return userData != null;
+  }
+
+  /// Update user profile (first_name, last_name, username, bio, date of birth)
+  Future<void> updateUserProfile({
+    String? firstName,
+    String? lastName,
+    String? username,
+    String? bio,
+    DateTime? dateOfBirth,
+  }) async {
+    final user = currentUser;
+    if (user == null) throw AuthException.sessionExpired();
+    
+    try {
+      final updates = <String, dynamic>{
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+      
+      if (firstName != null) updates['first_name'] = firstName.trim();
+      if (lastName != null) updates['last_name'] = lastName.trim();
+      if (username != null) updates['username'] = username.trim();
+      if (bio != null) updates['bio'] = bio.trim();
+      if (dateOfBirth != null) {
+        updates['date_of_birth'] = dateOfBirth.toIso8601String();
+      }
+      
+      await client.from('users').update(updates).eq('id', user.id);
+      
+      // Update display_name in auth metadata if username changed
+      if (username != null) {
+        await client.auth.updateUser(
+          UserAttributes(
+            data: {'display_name': username.trim()},
+          ),
+        );
+      }
+      
+      debugPrint('✅ Profile updated successfully');
+    } catch (e) {
+      debugPrint('❌ Error updating profile: $e');
+      rethrow;
+    }
+  }
+
+  /// Update user data (generic key-value updates)
+  /// Used by CycleAnalyzer for predictions
+  Future<void> updateUserData(Map<String, dynamic> updates) async {
+    final user = currentUser;
+    if (user == null) throw AuthException.sessionExpired();
+
+    try {
+      await client.from('users').update(updates).eq('id', user.id);
+      debugPrint('✅ User data updated');
+    } catch (e) {
+      debugPrint('❌ Error updating user data: $e');
+      rethrow;
+    }
+  }
+
+  /// Get completed periods (periods with end_date set)
+  /// Used by CycleAnalyzer to calculate cycle lengths
+  Future<List<Period>> getCompletedPeriods({int? limit}) async {
+    final user = currentUser;
+    if (user == null) throw AuthException.sessionExpired();
+
+    var query = client
+        .from('periods')
+        .select()
+        .eq('user_id', user.id)
+        .not('end_date', 'is', null)
+        .order('start_date', ascending: false);
+
+    if (limit != null) {
+      query = query.limit(limit);
+    }
+
+    final response = await query;
+    return (response as List).map((json) => Period.fromJson(json)).toList();
   }
 
   // Period Logging Methods
 
-  // Start a new period
+  // Start a new period (ENHANCED with Truth Event - Instance 6)
   Future<Period> startPeriod({
     required DateTime startDate,
     FlowIntensity? intensity,
   }) async {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
+    // STEP 0: Auto-close any ongoing periods older than 15 days (data cleanup)
+    try {
+      final ongoingPeriods = await client
+          .from('periods')
+          .select()
+          .eq('user_id', user.id)
+          .isFilter('end_date', null);
+
+      for (final periodData in ongoingPeriods) {
+        final period = Period.fromJson(periodData);
+        final daysSinceStart = DateTime.now().difference(period.startDate).inDays;
+        
+        if (daysSinceStart > 15) {
+          // Auto-close this abnormally long period
+          final autoEndDate = period.startDate.add(const Duration(days: 7)); // Default 7-day period
+          debugPrint('⚠️ Auto-closing period ${period.id} ($daysSinceStart days old) with end date: $autoEndDate');
+          
+          await client
+              .from('periods')
+              .update({'end_date': autoEndDate.toIso8601String()})
+              .eq('id', period.id)
+              .eq('user_id', user.id);
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error auto-closing old periods: $e');
+    }
+
+    // STEP 1: Record prediction accuracy if this is not the first period
+    try {
+      final userData = await getUserData();
+      
+      if (userData == null) {
+        debugPrint('⚠️ User data not found');
+      } else {
+        final lastPeriodStart = userData['last_period_start'] != null
+            ? DateTime.parse(userData['last_period_start']!)
+            : null;
+
+        if (lastPeriodStart != null) {
+          // Calculate cycle number for this truth event
+          final completedPeriods = await getCompletedPeriods(limit: 100);
+          final cycleNumber = completedPeriods.length + 1;
+
+          // Record prediction accuracy (Instance 6: Truth Event)
+          await CycleAnalyzer.recordPredictionAccuracy(
+            userId: user.id,
+            cycleNumber: cycleNumber,
+            actualDate: startDate,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error recording prediction accuracy: $e');
+    }
+
+    // STEP 2: Create new period
     final data = {
       'user_id': user.id,
       'start_date': startDate.toIso8601String(),
@@ -253,6 +521,17 @@ class SupabaseService {
         .select()
         .single();
 
+    // STEP 3: Update user's last period start
+    await updateUserData({'last_period_start': startDate.toIso8601String()});
+
+    // STEP 4: RECALCULATE all predictions based on new data
+    try {
+      await CycleAnalyzer.recalculateAfterPeriodStart(user.id);
+      debugPrint('✅ Period started, predictions recalculated');
+    } catch (e) {
+      debugPrint('⚠️ Error recalculating predictions: $e');
+    }
+
     return Period.fromJson(response);
   }
 
@@ -262,7 +541,28 @@ class SupabaseService {
     required DateTime endDate,
   }) async {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
+
+    // Validate: Get the period to check start date
+    final periodData = await client
+        .from('periods')
+        .select()
+        .eq('id', periodId)
+        .eq('user_id', user.id)
+        .single();
+
+    final period = Period.fromJson(periodData);
+    
+    // Validation 1: End date must be after or equal to start date
+    if (endDate.isBefore(period.startDate)) {
+      throw ValidationException('End date cannot be before start date', code: 'VAL_003');
+    }
+
+    // Validation 2: Period cannot be longer than 15 days
+    final durationDays = endDate.difference(period.startDate).inDays;
+    if (durationDays > 15) {
+      throw ValidationException('Let\'s keep periods under 15 days - mind checking those dates? 📅', code: 'VAL_004');
+    }
 
     final response = await client
         .from('periods')
@@ -278,14 +578,16 @@ class SupabaseService {
   // Get current ongoing period (if any)
   Future<Period?> getCurrentPeriod() async {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
+    // Use limit(1) to handle edge case of duplicate ongoing periods
     final response = await client
         .from('periods')
         .select()
         .eq('user_id', user.id)
         .isFilter('end_date', null)
         .order('start_date', ascending: false)
+        .limit(1)
         .maybeSingle();
 
     if (response == null) return null;
@@ -295,7 +597,7 @@ class SupabaseService {
   // Get all periods for the user
   Future<List<Period>> getPeriods({int? limit}) async {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
     var query = client
         .from('periods')
@@ -317,17 +619,32 @@ class SupabaseService {
     required DateTime endDate,
   }) async {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
+    // Fetch periods that could overlap with the range
+    // Start 60 days before to catch periods that might extend into the range
+    final lookbackDate = startDate.subtract(const Duration(days: 60));
+    
     final response = await client
         .from('periods')
         .select()
         .eq('user_id', user.id)
-        .gte('start_date', startDate.toIso8601String())
+        .gte('start_date', lookbackDate.toIso8601String())
         .lte('start_date', endDate.toIso8601String())
         .order('start_date', ascending: false);
 
-    return (response as List).map((json) => Period.fromJson(json)).toList();
+    final allPeriods = (response as List).map((json) => Period.fromJson(json)).toList();
+    
+    // Filter to only include periods that actually overlap with the date range
+    return allPeriods.where((period) {
+      final periodStart = period.startDate;
+      final periodEnd = period.endDate ?? DateTime.now(); // Ongoing period
+      
+      // Check if period overlaps with the requested range
+      // Period overlaps if: start <= endDate AND end >= startDate
+      return periodStart.isBefore(endDate.add(const Duration(days: 1))) &&
+             periodEnd.isAfter(startDate.subtract(const Duration(days: 1)));
+    }).toList();
   }
 
   // Update period flow intensity
@@ -336,7 +653,7 @@ class SupabaseService {
     required FlowIntensity intensity,
   }) async {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
     final response = await client
         .from('periods')
@@ -352,7 +669,7 @@ class SupabaseService {
   // Delete a period
   Future<void> deletePeriod(String periodId) async {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
     await client
         .from('periods')
@@ -370,7 +687,7 @@ class SupabaseService {
     String? notes,
   }) async {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
     // Check if mood already exists for this date
     final existing = await client
@@ -384,7 +701,7 @@ class SupabaseService {
       // Update existing mood
       final response = await client
           .from('moods')
-          .update({'mood': mood.name, if (notes != null) 'notes': notes})
+          .update({'mood_type': mood.name, if (notes != null) 'notes': notes})
           .eq('id', existing['id'])
           .select()
           .single();
@@ -395,7 +712,7 @@ class SupabaseService {
       final data = {
         'user_id': user.id,
         'date': date.toIso8601String().split('T')[0],
-        'mood': mood.name,
+        'mood_type': mood.name,
         if (notes != null) 'notes': notes,
       };
 
@@ -412,7 +729,7 @@ class SupabaseService {
   // Get mood for a specific date
   Future<Mood?> getMoodForDate(DateTime date) async {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
     final response = await client
         .from('moods')
@@ -433,34 +750,50 @@ class SupabaseService {
     Map<SymptomType, String>? notes,
   }) async {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
-    // Delete existing symptoms for this date first
-    await client
-        .from('symptoms')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('date', date.toIso8601String().split('T')[0]);
+    final dateStr = date.toIso8601String().split('T')[0];
 
-    // Insert new symptoms
+    // Build new symptoms data BEFORE deleting
     final symptomsData = symptomTypes.map((type) {
       return {
         'user_id': user.id,
-        'date': date.toIso8601String().split('T')[0],
-        'symptom_type': type.name,
+        'date': dateStr,
+        'symptom_type': type.value, // Use .value instead of .name for database
         'severity': severities?[type] ?? 3,
         if (notes?[type] != null) 'notes': notes![type],
       };
     }).toList();
 
-    if (symptomsData.isEmpty) return [];
+    // If no symptoms, just delete existing and return
+    if (symptomsData.isEmpty) {
+      await client
+          .from('symptoms')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('date', dateStr);
+      return [];
+    }
 
-    final response = await client
+    // Delete existing symptoms for this date
+    await client
         .from('symptoms')
-        .insert(symptomsData)
-        .select();
+        .delete()
+        .eq('user_id', user.id)
+        .eq('date', dateStr);
 
-    return (response as List).map((json) => Symptom.fromJson(json)).toList();
+    // Insert new symptoms
+    try {
+      final response = await client
+          .from('symptoms')
+          .insert(symptomsData)
+          .select();
+
+      return (response as List).map((json) => Symptom.fromJson(json)).toList();
+    } catch (e) {
+      // If insert fails, at least provide context
+      throw Exception('Failed to save symptoms: ${e.toString()}');
+    }
   }
 
   // Get moods for a date range (batch query optimization)
@@ -469,7 +802,7 @@ class SupabaseService {
     required DateTime endDate,
   }) async {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
     final response = await client
         .from('moods')
@@ -485,7 +818,7 @@ class SupabaseService {
   // Get symptoms for a specific date
   Future<List<Symptom>> getSymptomsForDate(DateTime date) async {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
     final response = await client
         .from('symptoms')
@@ -502,7 +835,7 @@ class SupabaseService {
     required DateTime endDate,
   }) async {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
     final response = await client
         .from('symptoms')
@@ -515,6 +848,26 @@ class SupabaseService {
     return (response as List).map((json) => Symptom.fromJson(json)).toList();
   }
 
+  // Delete mood entry
+  Future<void> deleteMood(String moodId) async {
+    final user = currentUser;
+    if (user == null) throw AuthException.sessionExpired();
+
+    await client.from('moods').delete().eq('id', moodId).eq('user_id', user.id);
+  }
+
+  // Delete symptom entry
+  Future<void> deleteSymptom(String symptomId) async {
+    final user = currentUser;
+    if (user == null) throw AuthException.sessionExpired();
+
+    await client
+        .from('symptoms')
+        .delete()
+        .eq('id', symptomId)
+        .eq('user_id', user.id);
+  }
+
   // Sexual Activity Methods
 
   // Log sexual activity
@@ -525,7 +878,7 @@ class SupabaseService {
     String? notes,
   }) async {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
     final data = {
       'user_id': user.id,
@@ -547,7 +900,7 @@ class SupabaseService {
   // Get sexual activity for a specific date
   Future<SexualActivity?> getSexualActivityForDate(DateTime date) async {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
     final response = await client
         .from('sexual_activities')
@@ -566,7 +919,7 @@ class SupabaseService {
     required DateTime endDate,
   }) async {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
     final response = await client
         .from('sexual_activities')
@@ -584,7 +937,7 @@ class SupabaseService {
   // Delete sexual activity
   Future<void> deleteSexualActivity(String id) async {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
     await client
         .from('sexual_activities')
@@ -601,7 +954,7 @@ class SupabaseService {
     required String content,
   }) async {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
     // Check if note exists for this date
     final existing = await getNoteForDate(date);
@@ -641,7 +994,7 @@ class SupabaseService {
   // Get note for a specific date
   Future<Note?> getNoteForDate(DateTime date) async {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
     final response = await client
         .from('notes')
@@ -660,7 +1013,7 @@ class SupabaseService {
     required DateTime endDate,
   }) async {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
     final response = await client
         .from('notes')
@@ -676,7 +1029,7 @@ class SupabaseService {
   // Delete note
   Future<void> deleteNote(String id) async {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
     await client.from('notes').delete().eq('id', id).eq('user_id', user.id);
   }
@@ -689,7 +1042,7 @@ class SupabaseService {
     DateTime? dueDate,
   }) async {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
     await client
         .from('users')
@@ -705,7 +1058,7 @@ class SupabaseService {
   // Disable pregnancy mode
   Future<void> disablePregnancyMode() async {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
     await client
         .from('users')
@@ -733,6 +1086,33 @@ class SupabaseService {
     };
   }
 
+  // Delete account and all associated data
+  Future<void> deleteAccount() async {
+    final user = currentUser;
+    if (user == null) throw AuthException.sessionExpired();
+
+    try {
+      // Delete all user data from related tables
+      await client.from('moods').delete().eq('user_id', user.id);
+      await client.from('symptoms').delete().eq('user_id', user.id);
+      await client.from('periods').delete().eq('user_id', user.id);
+      await client.from('sexual_activities').delete().eq('user_id', user.id);
+      await client.from('notes').delete().eq('user_id', user.id);
+
+      // Delete user record (this will cascade delete other data due to foreign keys)
+      await client.from('users').delete().eq('id', user.id);
+
+      // Delete the auth account
+      await client.auth.admin.deleteUser(user.id);
+
+      // Sign out
+      await signOut();
+    } catch (e) {
+      debugPrint('Error deleting account: $e');
+      rethrow;
+    }
+  }
+
   // Stream Methods - Real-time data with Supabase subscriptions
 
   /// Stream periods for a specific date range
@@ -741,7 +1121,7 @@ class SupabaseService {
     required DateTime endDate,
   }) {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
     return client
         .from('periods')
@@ -765,7 +1145,7 @@ class SupabaseService {
     required DateTime endDate,
   }) {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
     return client
         .from('moods')
@@ -789,7 +1169,7 @@ class SupabaseService {
     required DateTime endDate,
   }) {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
     return client
         .from('symptoms')
@@ -800,7 +1180,8 @@ class SupabaseService {
           return list
               .where((s) {
                 final sDate = DateTime.parse('${s['date']}T00:00:00');
-                return sDate.isAfter(startDate) && sDate.isBefore(endDate);
+                // Use inclusive comparison to include start and end dates
+                return !sDate.isBefore(startDate) && sDate.isBefore(endDate);
               })
               .map((json) => Symptom.fromJson(json))
               .toList();
@@ -813,7 +1194,7 @@ class SupabaseService {
     required DateTime endDate,
   }) {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
     return client
         .from('sexual_activities')
@@ -837,7 +1218,7 @@ class SupabaseService {
     required DateTime endDate,
   }) {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
 
     return client
         .from('notes')
@@ -858,7 +1239,7 @@ class SupabaseService {
   /// Stream mood for a specific date
   Stream<Mood?> getMoodStream(DateTime date) {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
     final dateStr = date.toIso8601String().split('T')[0];
 
     return client
@@ -879,7 +1260,7 @@ class SupabaseService {
   /// Stream note for a specific date
   Stream<Note?> getNoteStream(DateTime date) {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
     final dateStr = date.toIso8601String().split('T')[0];
 
     return client
@@ -900,7 +1281,7 @@ class SupabaseService {
   /// Stream sexual activity for a specific date
   Stream<SexualActivity?> getSexualActivityStream(DateTime date) {
     final user = currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw AuthException.sessionExpired();
     final dateStr = date.toIso8601String().split('T')[0];
 
     return client
@@ -917,4 +1298,90 @@ class SupabaseService {
           return null;
         });
   }
+
+  // Notification Preferences Methods
+  /// Get notification preferences for current user
+  Future<Map<String, dynamic>?> getNotificationPreferencesData() async {
+    final user = currentUser;
+    if (user == null) throw AuthException.sessionExpired();
+
+    try {
+      final response = await client
+          .from('users')
+          .select('notification_preferences')
+          .eq('id', user.id)
+          .maybeSingle();
+
+      return response?['notification_preferences'] as Map<String, dynamic>?;
+    } catch (e) {
+      debugPrint('Error fetching notification preferences: $e');
+      return null;
+    }
+  }
+
+  /// Save notification preferences for current user
+  Future<void> saveNotificationPreferencesData(
+      Map<String, dynamic> preferences) async {
+    final user = currentUser;
+    if (user == null) throw AuthException.sessionExpired();
+
+    try {
+      await client
+          .from('users')
+          .update({'notification_preferences': preferences}).eq('id', user.id);
+      debugPrint('✅ Notification preferences saved');
+    } catch (e) {
+      debugPrint('Error saving notification preferences: $e');
+      rethrow;
+    }
+  }
+
+  /// Save FCM token for current user
+  Future<void> saveFCMToken(String token) async {
+    final user = currentUser;
+    if (user == null) throw AuthException.sessionExpired();
+
+    try {
+      await client.from('users').update({'fcm_token': token}).eq('id', user.id);
+      debugPrint('✅ FCM token saved to database');
+    } catch (e) {
+      debugPrint('Error saving FCM token: $e');
+      rethrow;
+    }
+  }
+
+  /// Get FCM token for current user
+  Future<String?> getFCMToken() async {
+    final user = currentUser;
+    if (user == null) throw AuthException.sessionExpired();
+
+    try {
+      final response =
+          await client.from('users').select('fcm_token').eq('id', user.id).maybeSingle();
+      return response?['fcm_token'] as String?;
+    } catch (e) {
+      debugPrint('Error getting FCM token: $e');
+      return null;
+    }
+  }
+
+  /// Update FCM token when it refreshes
+  Future<void> updateFCMToken(String newToken) async {
+    final user = currentUser;
+    if (user == null) throw AuthException.sessionExpired();
+
+    try {
+      await client
+          .from('users')
+          .update({'fcm_token': newToken}).eq('id', user.id);
+      debugPrint('✅ FCM token updated in database');
+    } catch (e) {
+      debugPrint('Error updating FCM token: $e');
+      rethrow;
+    }
+  }
+
+  // Note: These methods are implemented in the notification_provider.dart
+  // This service layer provides the data persistence mechanisms
 }
+

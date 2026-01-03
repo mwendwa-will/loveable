@@ -5,8 +5,12 @@ import 'package:lovely/providers/daily_log_provider.dart';
 import 'package:lovely/models/mood.dart';
 import 'package:lovely/models/symptom.dart';
 import 'package:lovely/models/sexual_activity.dart';
+import 'package:lovely/models/period.dart';
 import 'package:intl/intl.dart';
 import 'package:lovely/core/feedback/feedback_service.dart';
+import 'package:lovely/widgets/mood_picker.dart';
+import 'package:lovely/widgets/symptom_picker.dart';
+import 'package:lovely/widgets/app_dialog.dart';
 
 class DailyLogScreen extends ConsumerStatefulWidget {
   final DateTime selectedDate;
@@ -185,6 +189,8 @@ class _DailyLogScreenState extends ConsumerState<DailyLogScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    _buildPeriodSection(),
+                    const SizedBox(height: 16),
                     _buildMoodSection(mood),
                     const SizedBox(height: 16),
                     _buildSymptomsSection(symptoms),
@@ -268,8 +274,33 @@ class _DailyLogScreenState extends ConsumerState<DailyLogScreen> {
                 const Spacer(),
                 if (mood == null)
                   FilledButton.tonalIcon(
-                    onPressed: () {
-                      // TODO: Navigate to add mood
+                    onPressed: () async {
+                      final selectedMood = await MoodPicker.show(
+                        context,
+                        currentMood: mood?.moodType,
+                      );
+
+                      if (selectedMood != null) {
+                        try {
+                          await ref
+                              .read(supabaseServiceProvider)
+                              .saveMood(
+                                date: widget.selectedDate,
+                                mood: selectedMood,
+                              );
+
+                          if (mounted) {
+                            FeedbackService.showSuccess(
+                              context,
+                              'Mood logged successfully!',
+                            );
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            FeedbackService.showError(context, e);
+                          }
+                        }
+                      }
                     },
                     icon: const Icon(Icons.add, size: 18),
                     label: const Text('Add'),
@@ -314,8 +345,33 @@ class _DailyLogScreenState extends ConsumerState<DailyLogScreen> {
                     ),
                     const SizedBox(width: 8),
                     InkWell(
-                      onTap: () {
-                        // TODO: Add delete mood functionality
+                      onTap: () async {
+                        final confirmed = await AppDialog.showConfirmation(
+                          context,
+                          title: 'Delete Mood',
+                          message: 'Remove this mood entry?',
+                          confirmText: 'Delete',
+                          isDangerous: true,
+                        );
+
+                        if (confirmed == true) {
+                          try {
+                            await ref
+                                .read(supabaseServiceProvider)
+                                .deleteMood(mood.id);
+
+                            if (mounted) {
+                              FeedbackService.showSuccess(
+                                context,
+                                'Mood deleted',
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              FeedbackService.showError(context, e);
+                            }
+                          }
+                        }
                       },
                       borderRadius: BorderRadius.circular(12),
                       child: Icon(
@@ -398,8 +454,58 @@ class _DailyLogScreenState extends ConsumerState<DailyLogScreen> {
                 ),
                 const Spacer(),
                 FilledButton.tonalIcon(
-                  onPressed: () {
-                    // TODO: Navigate to add symptoms
+                  onPressed: () async {
+                    final currentSymptomTypes = symptoms
+                        .map((s) => s.symptomType)
+                        .toList();
+
+                    if (!mounted) return;
+                    final selectedSymptom = await SymptomPicker.show(
+                      context,
+                      selectedSymptoms: currentSymptomTypes,
+                    );
+
+                    if (selectedSymptom != null && mounted) {
+                      // Ask for severity
+                      final severity = await SymptomPicker.showSeverity(
+                        context,
+                        selectedSymptom,
+                      );
+
+                      if (severity != null) {
+                        try {
+                          final updatedSymptoms = [
+                            ...currentSymptomTypes,
+                            selectedSymptom,
+                          ];
+
+                          final severities = <SymptomType, int>{};
+                          for (var s in symptoms) {
+                            severities[s.symptomType] = s.severity ?? 3;
+                          }
+                          severities[selectedSymptom] = severity;
+
+                          await ref
+                              .read(supabaseServiceProvider)
+                              .saveSymptoms(
+                                date: widget.selectedDate,
+                                symptomTypes: updatedSymptoms,
+                                severities: severities,
+                              );
+
+                          if (mounted) {
+                            FeedbackService.showSuccess(
+                              context,
+                              'Symptom logged successfully!',
+                            );
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            FeedbackService.showError(context, e);
+                          }
+                        }
+                      }
+                    }
                   },
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('Add'),
@@ -450,8 +556,34 @@ class _DailyLogScreenState extends ConsumerState<DailyLogScreen> {
                         ),
                         const SizedBox(width: 8),
                         InkWell(
-                          onTap: () {
-                            // TODO: Add delete symptom functionality
+                          onTap: () async {
+                            final confirmed = await AppDialog.showConfirmation(
+                              context,
+                              title: 'Delete Symptom',
+                              message:
+                                  'Remove ${symptom.symptomType.displayName}?',
+                              confirmText: 'Delete',
+                              isDangerous: true,
+                            );
+
+                            if (confirmed == true) {
+                              try {
+                                await ref
+                                    .read(supabaseServiceProvider)
+                                    .deleteSymptom(symptom.id);
+
+                                if (mounted) {
+                                  FeedbackService.showSuccess(
+                                    context,
+                                    'Symptom deleted',
+                                  );
+                                }
+                              } catch (e) {
+                                if (mounted) {
+                                  FeedbackService.showError(context, e);
+                                }
+                              }
+                            }
                           },
                           borderRadius: BorderRadius.circular(12),
                           child: Icon(
@@ -744,6 +876,304 @@ class _DailyLogScreenState extends ConsumerState<DailyLogScreen> {
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPeriodSection() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final periodsAsync = ref.watch(
+      periodsStreamProvider(
+        DateRange(
+          startDate: widget.selectedDate,
+          endDate: widget.selectedDate.add(const Duration(days: 1)),
+        ),
+      ),
+    );
+
+    return Card(
+      elevation: 0,
+      color: colorScheme.surfaceContainerHighest,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: colorScheme.errorContainer,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.water_drop,
+                    color: colorScheme.onErrorContainer,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Period Flow',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                const Spacer(),
+                periodsAsync.when(
+                  data: (periods) {
+                    final hasPeriod = periods.isNotEmpty;
+                    if (!hasPeriod) {
+                      return FilledButton.tonalIcon(
+                        onPressed: () => _logPeriodStart(),
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('Log Period'),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                  loading: () => const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  error: (error, stack) => const SizedBox.shrink(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            periodsAsync.when(
+              data: (periods) {
+                if (periods.isEmpty) {
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: colorScheme.outline.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle_outline,
+                          color: colorScheme.onSurfaceVariant,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'No period logged for this day',
+                          style: TextStyle(
+                            color: colorScheme.onSurfaceVariant,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final period = periods.first;
+                return Container(
+                  decoration: BoxDecoration(
+                    color: colorScheme.errorContainer.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: colorScheme.error.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.water_drop,
+                        size: 20,
+                        color: colorScheme.onErrorContainer,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        period.flowIntensity != null
+                            ? '${period.flowIntensity!.name.substring(0, 1).toUpperCase()}${period.flowIntensity!.name.substring(1)} flow'
+                            : 'Period started',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: colorScheme.onErrorContainer,
+                        ),
+                      ),
+                      const Spacer(),
+                      InkWell(
+                        onTap: () async {
+                          final confirmed = await AppDialog.showConfirmation(
+                            context,
+                            title: 'Delete Period',
+                            message: 'Remove this period entry?',
+                            confirmText: 'Delete',
+                            isDangerous: true,
+                          );
+
+                          if (confirmed == true) {
+                            try {
+                              await ref
+                                  .read(supabaseServiceProvider)
+                                  .deletePeriod(period.id);
+
+                              if (mounted) {
+                                FeedbackService.showSuccess(
+                                  context,
+                                  'Period deleted',
+                                );
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                FeedbackService.showError(context, e);
+                              }
+                            }
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Icon(
+                          Icons.close,
+                          size: 18,
+                          color: colorScheme.onErrorContainer,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: colorScheme.errorContainer.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Error loading period data',
+                  style: TextStyle(color: colorScheme.error),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _logPeriodStart() async {
+    final intensity = await showDialog<FlowIntensity>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Log Period Start'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Select flow intensity for ${DateFormat('MMM d, yyyy').format(widget.selectedDate)}:',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildFlowButton(
+                  context,
+                  FlowIntensity.light,
+                  'Light',
+                  Icons.water_drop_outlined,
+                ),
+                _buildFlowButton(
+                  context,
+                  FlowIntensity.medium,
+                  'Medium',
+                  Icons.water_drop,
+                ),
+                _buildFlowButton(
+                  context,
+                  FlowIntensity.heavy,
+                  'Heavy',
+                  Icons.water_drop,
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+
+    if (intensity != null) {
+      try {
+        await ref.read(supabaseServiceProvider).startPeriod(
+              startDate: widget.selectedDate,
+              intensity: intensity,
+            );
+
+        if (mounted) {
+          FeedbackService.showSuccess(
+            context,
+            'Period logged! Predictions updated.',
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          FeedbackService.showError(context, e);
+        }
+      }
+    }
+  }
+
+  Widget _buildFlowButton(
+    BuildContext context,
+    FlowIntensity intensity,
+    String label,
+    IconData icon,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: () => Navigator.pop(context, intensity),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: colorScheme.errorContainer.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: colorScheme.error.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: colorScheme.error, size: 32),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: colorScheme.onSurface,
               ),
             ),
           ],

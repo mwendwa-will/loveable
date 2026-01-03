@@ -289,6 +289,59 @@ TextField(
 
 ---
 
+## Modern Flutter APIs (No Deprecated Patterns)
+
+### Radio Button Groups (Flutter 3.35+)
+
+**Modern Pattern - RadioGroup Widget:**
+```dart
+RadioGroup<int>(
+  groupValue: selectedTheme,
+  onChanged: (value) {
+    setState(() => selectedTheme = value);
+  },
+  child: Column(
+    children: [
+      Row(
+        children: [
+          Radio<int>(value: 0),  // No groupValue or onChanged
+          const Icon(Icons.light_mode),
+          const SizedBox(width: 8),
+          const Text('Light'),
+        ],
+      ),
+      Row(
+        children: [
+          Radio<int>(value: 1),
+          const Icon(Icons.dark_mode),
+          const SizedBox(width: 8),
+          const Text('Dark'),
+        ],
+      ),
+    ],
+  ),
+)
+```
+
+**Benefits:**
+- Centralized group value management
+- Better accessibility (ARIA compliant)
+- Improved keyboard navigation
+- Cleaner, more readable code
+- No individual `Radio.onChanged` callbacks
+
+**NOT USING (Deprecated):**
+```dart
+// ❌ DEPRECATED - Do not use
+Radio<int>(
+  value: 0,
+  groupValue: selectedTheme,  // DEPRECATED
+  onChanged: (value) { ... }, // DEPRECATED
+)
+```
+
+---
+
 ## Layout Patterns
 
 ### App Bar Structure
@@ -548,6 +601,96 @@ Smooth     300-600ms  (opacity fades, page transitions)
 
 ---
 
+## Responsive Design System
+
+### Screen Size Breakpoints
+
+```
+Small      < 360px    Compact phones (iPhone SE, etc)
+Medium     360-400px  Standard phones (iPhone 12, etc)
+Large      400-600px  Large phones (iPhone 14 Pro Max, etc)
+Tablet     > 600px    Tablets and desktop
+```
+
+### Using ResponsiveSizing
+
+All screen elements should use the centralized `ResponsiveSizing` utility:
+
+```dart
+// Access via context extension
+context.responsive.weekStripCircleSize        // 36-40px
+context.responsive.calendarDateFontSize       // 11-13px
+context.responsive.calendarIconSize           // 9-10px
+context.responsive.weekStripMoodIconSize      // 14-16px
+context.responsive.spacingMd                  // 8-16px
+context.responsive.borderRadius               // 12-16px
+
+// Or via direct instantiation
+final sizing = ResponsiveSizing.of(context);
+Icon(Icons.star, size: sizing.iconSize);
+```
+
+### Properties Available
+
+**Calendar Indicators:**
+- `calendarCellAspectRatio` - Cell proportion adjustment
+- `calendarDateFontSize` - Date number size
+- `calendarIconSize` - Mood/activity icons in calendar
+- `calendarActivityIconSize` - Heart icon size
+
+**Week Strip:**
+- `weekStripCircleSize` - Date circle diameter (36-40px)
+- `weekStripDateFontSize` - Date font in circle
+- `weekStripMoodIconSize` - Mood emoji/icon size
+- `weekStripActivityIconSize` - Activity heart icon
+- `weekStripDotSize` - Symptom dot size
+
+**General:**
+- `smallFontSize`, `bodyFontSize`, `titleFontSize`
+- `smallIconSize`, `iconSize`, `largeIconSize`
+- `spacingXs`, `spacingSm`, `spacingMd`, `spacingLg`
+- `minTouchTarget` - 44-48px
+- `borderRadius`, `borderRadiusSm`
+
+---
+
+## Indicator Patterns (Calendar & Week Strip)
+
+### Mood Icons
+- Material Design sentiment icons (not emojis)
+- Color-coded by emotion:
+  - Green: Happy
+  - Blue: Calm
+  - Grey: Tired
+  - Indigo: Sad
+  - Orange: Irritable
+  - Purple: Anxious
+  - Amber: Energetic
+
+### Sexual Activity Indicator
+- Heart icon (Icons.favorite)
+- **Unprotected**: Heart only (red/error color at 80% opacity)
+- **Protected**: Heart + Shield badge overlay
+  - Shield icon in small circle
+  - Primary color (#FF6F61)
+  - 40% of heart size
+  - Positioned bottom-right
+
+### Symptom Dots
+- 3x3px circles per small devices
+- Up to 5px on large devices
+- Secondary color (coral)
+- Shows 1-3 dots max (if 5+ symptoms, still 3 dots)
+- Responsive spacing via `context.responsive.weekStripDotSize`
+
+### Information Hierarchy
+1. **Most Important** (background): Phase color
+2. **Very Important** (center): Mood icon
+3. **Important** (corners): Symptom dots
+4. **Discrete** (top): Activity indicator
+
+---
+
 ## Component Checklist
 
 Before creating a new component, ensure:
@@ -557,11 +700,13 @@ Before creating a new component, ensure:
 - [ ] Matches spacing system (multiples of 4)
 - [ ] Consistent border radius
 - [ ] Proper touch target size (48x48px min)
-- [ ] Accessible contrast ratios
+- [ ] Accessible contrast ratios (WCAG AA)
 - [ ] Clear visual hierarchy
 - [ ] Matches existing patterns
 - [ ] Handles loading/error states
 - [ ] Works on small and large screens
+- [ ] Mounted checks before navigation
+- [ ] No setState after dispose
 
 ---
 
@@ -576,6 +721,7 @@ lib/
     main/            # Main app screens
     onboarding/      # Onboarding flow
   services/          # Business logic
+  utils/             # Utilities (responsive_utils.dart)
 ```
 
 ### Naming Conventions

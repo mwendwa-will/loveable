@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:lovely/services/supabase_service.dart';
-import 'package:lovely/constants/app_colors.dart';
+import 'package:lovely/core/feedback/feedback_service.dart';
 
 class EmailVerificationBanner extends StatefulWidget {
   const EmailVerificationBanner({super.key});
@@ -22,22 +22,14 @@ class _EmailVerificationBannerState extends State<EmailVerificationBanner> {
       await SupabaseService().resendVerificationEmail();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Verification email sent! Please check your inbox.'),
-            backgroundColor: AppColors.success,
-            duration: Duration(seconds: 4),
-          ),
+        FeedbackService.showSuccess(
+          context,
+          'Email sent! Check your inbox ✉️',
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to send email: ${e.toString()}'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        FeedbackService.showError(context, e);
       }
     } finally {
       if (mounted) {
@@ -86,8 +78,9 @@ class _EmailVerificationBannerState extends State<EmailVerificationBanner> {
               Expanded(
                 child: Text(
                   isUrgent
-                      ? 'Please verify your email soon'
-                      : 'Verify your email address',
+                      ? 'Time to verify your email ⏰'
+                      : 'Let\'s verify your email',
+
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: isUrgent

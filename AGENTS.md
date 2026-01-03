@@ -121,9 +121,32 @@ The application is structured around a set of "agents," which are specialized co
 
 ### 4.3. UI Patterns & Responsive Design
 
--   **Responsive Sizing**: Use helper functions (`_getResponsiveSize`, `_getResponsiveFontSize`) to adapt UI elements to different screen sizes.
--   **Icons**: Use **FontAwesome** icons (`font_awesome_flutter` package).
+-   **Responsive Sizing**: Use the centralized `ResponsiveSizing` utility from `lib/utils/responsive_utils.dart` for consistent sizing across all screens.
+
+    ```dart
+    // Access via context extension
+    context.responsive.weekStripCircleSize
+    context.responsive.calendarDateFontSize
+    context.responsive.iconSize
+    context.responsive.spacingMd
+    
+    // Screen breakpoints:
+    // small:  < 360px (compact phones)
+    // medium: 360-400px (standard phones)
+    // large:  400-600px (large phones)
+    // tablet: > 600px (tablets)
+    ```
+
+-   **Icons**: Use **Material Icons** for UI indicators. FontAwesome (`font_awesome_flutter` package) for decorative icons.
 -   **FilterChips**: Use `Theme.of(context).colorScheme.surfaceTint` for theme-aware chip styling to ensure proper contrast in both light and dark modes.
+-   **Mood Colors**: Consistent color mapping for moods across the app:
+    - Happy: Green
+    - Calm: Blue
+    - Tired: Grey
+    - Sad: Indigo
+    - Irritable: Orange
+    - Anxious: Purple
+    - Energetic: Amber
 
 ---
 

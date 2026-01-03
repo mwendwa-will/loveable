@@ -18,7 +18,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _emailOrUsernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _isLoading = false;
@@ -26,7 +26,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _emailOrUsernameController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -41,7 +41,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       try {
         final supabase = ref.read(supabaseServiceProvider);
         final response = await supabase.signIn(
-          email: _emailController.text.trim(),
+          emailOrUsername: _emailOrUsernameController.text.trim(),
           password: _passwordController.text,
         );
 
@@ -79,9 +79,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _handleSocialLogin(String provider) async {
     // TODO: Implement social login logic
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('$provider login coming soon')));
+    FeedbackService.showInfo(context, '$provider login coming soon');
   }
 
   @override
@@ -160,13 +158,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
 
                   Semantics(
-                    label: 'Email address input field',
+                    label: 'Email or username input field',
                     textField: true,
                     child: TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
+                      controller: _emailOrUsernameController,
+                      keyboardType: TextInputType.text,
                       decoration: InputDecoration(
-                        labelText: 'Email',
+                        labelText: 'Email or Username',
+                        hintText: 'Enter your email or username',
                         prefixIcon: const Icon(
                           FontAwesomeIcons.envelope,
                           size: 20,
@@ -188,10 +187,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        if (!value.contains('@')) {
-                          return 'Please enter a valid email';
+                          return 'Please enter your email or username';
                         }
                         return null;
                       },

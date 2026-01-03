@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lovely/models/mood.dart';
 import 'package:lovely/models/symptom.dart';
@@ -9,40 +11,83 @@ import 'package:lovely/providers/period_provider.dart';
 final moodStreamProvider = StreamProvider.autoDispose
     .family<Mood?, DateTime>((ref, date) {
   final supabase = ref.watch(supabaseServiceProvider);
-  return supabase.getMoodStream(date);
+  final controller = StreamController<Mood?>();
+  
+  final subscription = supabase.getMoodStream(date).listen(
+    controller.add,
+    onError: controller.addError,
+    onDone: controller.close,
+  );
+  
+  ref.onDispose(() {
+    subscription.cancel();
+    if (!controller.isClosed) controller.close();
+  });
+  
+  return controller.stream;
 });
 
 // Stream provider for symptoms for a specific date
 final symptomsStreamProvider = StreamProvider.autoDispose
     .family<List<Symptom>, DateTime>((ref, date) {
   final supabase = ref.watch(supabaseServiceProvider);
-  return supabase
-      .getSymptomsStream(
-        startDate: date,
-        endDate: date.add(const Duration(days: 1)),
-      )
-      .map((symptoms) => symptoms.where((s) {
-            final symptomDate =
-                DateTime.parse('${s.date}T00:00:00').toLocal();
-            final targetDate = date.toLocal();
-            return symptomDate.year == targetDate.year &&
-                symptomDate.month == targetDate.month &&
-                symptomDate.day == targetDate.day;
-          }).toList());
+  final controller = StreamController<List<Symptom>>();
+  
+  final subscription = supabase.getSymptomsStream(
+    startDate: date,
+    endDate: date.add(const Duration(days: 1)),
+  ).listen(
+    controller.add,
+    onError: controller.addError,
+    onDone: controller.close,
+  );
+  
+  ref.onDispose(() {
+    subscription.cancel();
+    if (!controller.isClosed) controller.close();
+  });
+  
+  return controller.stream;
 });
 
 // Stream provider for sexual activity for a specific date
 final sexualActivityStreamProvider = StreamProvider.autoDispose
     .family<SexualActivity?, DateTime>((ref, date) {
   final supabase = ref.watch(supabaseServiceProvider);
-  return supabase.getSexualActivityStream(date);
+  final controller = StreamController<SexualActivity?>();
+  
+  final subscription = supabase.getSexualActivityStream(date).listen(
+    controller.add,
+    onError: controller.addError,
+    onDone: controller.close,
+  );
+  
+  ref.onDispose(() {
+    subscription.cancel();
+    if (!controller.isClosed) controller.close();
+  });
+  
+  return controller.stream;
 });
 
 // Stream provider for note for a specific date
 final noteStreamProvider =
     StreamProvider.autoDispose.family<Note?, DateTime>((ref, date) {
   final supabase = ref.watch(supabaseServiceProvider);
-  return supabase.getNoteStream(date);
+  final controller = StreamController<Note?>();
+  
+  final subscription = supabase.getNoteStream(date).listen(
+    controller.add,
+    onError: controller.addError,
+    onDone: controller.close,
+  );
+  
+  ref.onDispose(() {
+    subscription.cancel();
+    if (!controller.isClosed) controller.close();
+  });
+  
+  return controller.stream;
 });
 
 // Combined daily log data class

@@ -44,7 +44,7 @@ void main() {
     test('Cycle phases are correctly determined', () {
       final lastPeriodStart = DateTime(2024, 1, 1);
       final periodLength = 5;
-      final averageCycleLength = 28;
+      // Average cycle length of 28 days used for cycle phase calculations
 
       // Menstrual phase: Days 1-5
       final menstrualEnd = lastPeriodStart.add(Duration(days: periodLength - 1));

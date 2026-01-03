@@ -14,18 +14,33 @@ Lovely is a privacy-focused wellness app that combines period tracking, task man
 - **Email Verification** - 7-day grace period with verification reminders
 - **Personalized Onboarding** - Collects essential cycle information during first-time setup
 - **Profile Management** - User profile with settings and account management
+- **App-Specific PIN Security** - 4-digit PIN lock with SHA-256 hashing, auto-lock on background, encrypted storage
 - **Period Logging** - Start/end period tracking with flow intensity
-- **Mood Tracking** - Daily mood logging with 7 emotional states
-- **Symptom Tracking** - Log 8 different symptom types
+- **Mood Tracking** - Daily mood logging with 7 emotional states via bottom sheet picker
+- **Symptom Tracking** - Log 8 different symptoms with severity levels (1-5 scale)
+- **Sexual Activity Logging** - Track intimate activity with protection details
+- **Daily Notes** - Journal entries for each day
+- **Pregnancy Mode** - Specialized tracking for expecting mothers
 - **Cycle Dashboard** - Visual cycle card showing current period status
-- **Responsive Design** - Adapts to different screen sizes
-- **Material Design 3** - Hybrid approach with strict usability standards
+- **Week Strip View** - 7-day swipeable view with mood/symptom/activity icons, date navigation
+- **Calendar Month View** - Full calendar with phase colors, icons, responsive cells
+- **Day Detail Bottom Sheet** - Tap any date to see complete day information
+- **Quick Add Menu** - Long press for fast mood/symptom/activity logging
+- **Real-time Data Sync** - Stream-based architecture with instant updates across screens
+- **Responsive Design** - Centralized sizing utility scales UI for all device sizes
+- **Lifecycle Safety** - Proper mounted checks prevent common Flutter errors
+- **Material Design 3** - Icons (not emojis), FilledButton, modern elevation standards
+- **Modern APIs** - RadioGroup widget (Flutter 3.35+), no deprecated patterns
 - **Dark Mode Support** - Automatic theme switching based on system preferences
-- **Accessibility** - 48x48px touch targets, InkWell ripple effects, semantic labels
-- **Coral Sunset Theme** - Warm, feminine color palette designed for comfort
+- **Accessibility** - 48x48px+ touch targets, color + icon redundancy, semantic labels
+- **Coral Sunset Theme** - Warm, feminine color palette (#FF6F61 seed color)
+- **Account Management** - Full account deletion with cascading data cleanup
 
 ### In Development 🔄
-- Calendar view with period visualization
+- Privacy Settings (hide activity indicators - PIN protection ✅ completed)
+- Biometric unlock (Face ID/Touch ID/fingerprint) - infrastructure ready
+- Statistics & Trends View (mood patterns, symptom frequency)
+- Export Data (CSV/PDF download)
 - Cycle predictions and insights based on historical data
 - Task management system
 - Daily affirmations
@@ -35,7 +50,7 @@ Lovely is a privacy-focused wellness app that combines period tracking, task man
 ## Technology Stack
 
 **Frontend**
-- Flutter 3.0+
+- Flutter 3.35+ (RadioGroup widget support)
 - Dart
 - Material Design 3
 - Google Fonts (Inter)
@@ -47,10 +62,16 @@ Lovely is a privacy-focused wellness app that combines period tracking, task man
 - Row-Level Security policies
 - Firebase Cloud Messaging (planned)
 
+**Security**
+- flutter_secure_storage - Encrypted local storage
+- crypto - SHA-256 PIN hashing
+- local_auth - Biometric infrastructure (ready for future use)
+
 **Architecture**
 - Service layer pattern
-- State management (to be implemented)
+- Riverpod state management (PIN lock, providers)
 - Singleton pattern for API clients
+- App lifecycle observers
 
 ## Getting Started
 

@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lovely/constants/app_colors.dart';
 import 'package:lovely/services/supabase_service.dart';
+import 'package:lovely/services/cycle_analyzer.dart';
 import 'package:lovely/models/mood.dart';
 import 'package:lovely/models/symptom.dart';
 import 'package:lovely/models/sexual_activity.dart';
 import 'package:lovely/models/note.dart';
+import 'package:lovely/utils/responsive_utils.dart';
+import 'package:lovely/providers/daily_log_provider.dart';
 import 'package:intl/intl.dart';
 
 class CalendarScreen extends ConsumerWidget {
@@ -24,12 +28,17 @@ class _CalendarView extends ConsumerStatefulWidget {
   ConsumerState<_CalendarView> createState() => _CalendarViewState();
 }
 
-class _CalendarViewState extends ConsumerState<_CalendarView> {
+class _CalendarViewState extends ConsumerState<_CalendarView> with SingleTickerProviderStateMixin {
   final _supabase = SupabaseService();
   late PageController _pageController;
-  final int _currentPageIndex = 1; // Changed from 6 to 1 (only 3 months)
-  final int _totalMonths = 3; // Changed from 12 to 3 for lazy loading
+  final int _currentPageIndex = 6; // Start at middle month (6 months back + current)
+  final int _totalMonths = 12; // Show 12 months total
   DateTime _currentMonth = DateTime.now();
+  DateTime _selectedDate = DateTime.now(); // Track selected date for daily log view
+  bool _legendExpanded = false; // Collapsible legend
+  DateTime? _highlightToday; // For today button animation
+  late AnimationController _todayAnimationController;
+  late Animation<double> _todayAnimation;
 
   // Memoized color cache to avoid repeated theme lookups
   final Map<String, Color> _colorCache = {};
@@ -39,15 +48,30 @@ class _CalendarViewState extends ConsumerState<_CalendarView> {
   @override
   void initState() {
     super.initState();
+    // Clear cache to ensure fresh data after code changes
+    _calendarDataCache.clear();
     _pageController = PageController(
       initialPage: _currentPageIndex,
       viewportFraction: 0.92,
+    );
+    
+    // Today button animation
+    _todayAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+    _todayAnimation = Tween<double>(begin: 1.0, end: 1.3).animate(
+      CurvedAnimation(
+        parent: _todayAnimationController,
+        curve: Curves.easeInOut,
+      ),
     );
   }
 
   @override
   void dispose() {
     _pageController.dispose();
+    _todayAnimationController.dispose();
     super.dispose();
   }
 
@@ -76,6 +100,20 @@ class _CalendarViewState extends ConsumerState<_CalendarView> {
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
+    
+    // Trigger today cell animation
+    setState(() {
+      _highlightToday = DateTime.now();
+    });
+    _todayAnimationController.forward(from: 0).then((_) {
+      _todayAnimationController.reverse().then((_) {
+        if (mounted) {
+          setState(() {
+            _highlightToday = null;
+          });
+        }
+      });
+    });
   }
 
   void _onPageChanged(int index) {
@@ -89,6 +127,8 @@ class _CalendarViewState extends ConsumerState<_CalendarView> {
         newMonth.year != _currentMonth.year) {
       setState(() {
         _currentMonth = newMonth;
+        // When navigating to a new month, select the first day of that month
+        _selectedDate = DateTime(_currentMonth.year, _currentMonth.month, 1);
       });
     }
   }
@@ -103,6 +143,12 @@ class _CalendarViewState extends ConsumerState<_CalendarView> {
         centerTitle: true,
         backgroundColor: colorScheme.surfaceContainerHighest,
         actions: [
+          // Legend toggle button
+          IconButton(
+            icon: Icon(_legendExpanded ? Icons.info : Icons.info_outline),
+            onPressed: () => setState(() => _legendExpanded = !_legendExpanded),
+            tooltip: 'Toggle legend',
+          ),
           IconButton(
             icon: const Icon(Icons.today),
             onPressed: _goToToday,
@@ -115,9 +161,10 @@ class _CalendarViewState extends ConsumerState<_CalendarView> {
         children: [
           _buildWeekdayHeaders(),
           Expanded(
+            flex: 2,
             child: PageView.builder(
               controller: _pageController,
-              scrollDirection: Axis.vertical,
+              scrollDirection: Axis.vertical, // Vertical swipe for months
               onPageChanged: _onPageChanged,
               itemCount: _totalMonths,
               itemBuilder: (context, index) {
@@ -126,7 +173,17 @@ class _CalendarViewState extends ConsumerState<_CalendarView> {
               },
             ),
           ),
-          _buildLegend(),
+          // Daily log/agenda view for selected date
+          Expanded(
+            flex: 1,
+            child: _buildDailyLogPreview(_selectedDate),
+          ),
+          // Collapsible legend with smooth resize
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            child: _legendExpanded ? _buildLegend() : const SizedBox.shrink(),
+          ),
         ],
       ),
     );
@@ -171,7 +228,7 @@ class _CalendarViewState extends ConsumerState<_CalendarView> {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             decoration: BoxDecoration(
               color: colorScheme.primaryContainer,
               borderRadius: const BorderRadius.only(
@@ -183,10 +240,10 @@ class _CalendarViewState extends ConsumerState<_CalendarView> {
               child: Text(
                 monthYear,
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: colorScheme.onPrimaryContainer,
-                  letterSpacing: 0.5,
+                  letterSpacing: 0.3,
                 ),
               ),
             ),
@@ -216,7 +273,7 @@ class _CalendarViewState extends ConsumerState<_CalendarView> {
         if (snapshot.hasError) {
           return Center(
             child: Text(
-              'Error: ${snapshot.error}',
+              'Couldn\'t load the calendar right now',
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           );
@@ -225,13 +282,13 @@ class _CalendarViewState extends ConsumerState<_CalendarView> {
         final data = snapshot.data ?? CalendarData.empty();
 
         return GridView.builder(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(4),
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 7,
-            childAspectRatio: 1,
-            crossAxisSpacing: 4,
-            mainAxisSpacing: 4,
+            childAspectRatio: context.responsive.calendarCellAspectRatio,
+            crossAxisSpacing: 2,
+            mainAxisSpacing: 2,
           ),
           itemCount: totalDays,
           itemBuilder: (context, index) {
@@ -266,8 +323,6 @@ class _CalendarViewState extends ConsumerState<_CalendarView> {
     final hasMood = data.moods.containsKey(normalizedDate);
     final hasSymptoms = data.symptoms.containsKey(normalizedDate);
     final hasSexualActivity = data.sexualActivities.containsKey(normalizedDate);
-    final hasNote = data.notes.containsKey(normalizedDate);
-    final hasAnyLog = hasMood || hasSymptoms || hasSexualActivity || hasNote;
 
     Color? backgroundColor;
     Color? textColor;
@@ -323,9 +378,25 @@ class _CalendarViewState extends ConsumerState<_CalendarView> {
       borderColor = colorScheme.primary;
     }
 
-    return GestureDetector(
+    // Check if today animation should apply
+    final shouldAnimateToday = isToday && 
+        _highlightToday != null && 
+        _normalizeDate(_highlightToday!) == normalizedDate;
+
+    Widget cell = GestureDetector(
       onTap: () {
-        // TODO: Show day details or open daily log
+        // Just update selected date - preview updates below
+        setState(() {
+          _selectedDate = date;
+        });
+      },
+      onDoubleTap: () {
+        // Double-tap to toggle period
+        _togglePeriodForDate(date, hasPeriod, data);
+      },
+      onLongPress: () {
+        // Long-press for inline quick actions
+        _showInlineQuickActions(context, date, data);
       },
       child: Container(
         decoration: BoxDecoration(
@@ -338,105 +409,152 @@ class _CalendarViewState extends ConsumerState<_CalendarView> {
           ),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Stack(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Center(
-              child: Text(
-                '${date.day}',
-                style: TextStyle(
-                  color: !isCurrentMonth
-                      ? colorScheme.onSurface.withValues(alpha: 0.3)
-                      : textColor ?? colorScheme.onSurface,
-                  fontWeight: isToday ? FontWeight.bold : FontWeight.w500,
-                  fontSize: 13,
-                ),
+            // Sexual activity indicator (top)
+            SizedBox(
+              height: 9,
+              child: hasSexualActivity
+                  ? _buildActivityIcon(
+                      data.sexualActivities[normalizedDate]!,
+                      colorScheme,
+                    )
+                  : const SizedBox.shrink(),
+            ),
+            // Date number (center)
+            Text(
+              '${date.day}',
+              style: TextStyle(
+                color: !isCurrentMonth
+                    ? colorScheme.onSurface.withValues(alpha: 0.3)
+                    : textColor ?? colorScheme.onSurface,
+                fontWeight: isToday ? FontWeight.bold : FontWeight.w500,
+                fontSize: context.responsive.calendarDateFontSize,
               ),
             ),
-            if (hasPeriod && hasSexualActivity)
-              Positioned(
-                top: 2,
-                right: 2,
-                child: Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: colorScheme.onError,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: colorScheme.error, width: 1),
-                  ),
-                ),
-              ),
-            if (hasAnyLog && !hasPeriod && !hasPredictedPeriod)
-              Positioned(
-                bottom: 3,
-                left: 0,
-                right: 0,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (hasMood)
-                      Container(
-                        width: 4,
-                        height: 4,
-                        margin: const EdgeInsets.symmetric(horizontal: 1),
-                        decoration: BoxDecoration(
-                          color: _getMemoizedColor(
-                            context,
-                            'mood_log',
-                            () => AppColors.getMoodLogColor(context),
-                          ),
-                          shape: BoxShape.circle,
-                        ),
+            // Mood icon
+            SizedBox(
+              height: 11,
+              child: hasMood
+                  ? Icon(
+                      data.moods[normalizedDate]!.moodType.icon,
+                      size: context.responsive.calendarIconSize,
+                      color: _getMoodColor(
+                        data.moods[normalizedDate]!.moodType,
                       ),
-                    if (hasSymptoms)
-                      Container(
-                        width: 4,
-                        height: 4,
-                        margin: const EdgeInsets.symmetric(horizontal: 1),
-                        decoration: BoxDecoration(
-                          color: _getMemoizedColor(
-                            context,
-                            'symptoms_log',
-                            () => AppColors.getSymptomsLogColor(context),
-                          ),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    if (hasSexualActivity)
-                      Container(
-                        width: 4,
-                        height: 4,
-                        margin: const EdgeInsets.symmetric(horizontal: 1),
-                        decoration: BoxDecoration(
-                          color: _getMemoizedColor(
-                            context,
-                            'activity_log',
-                            () => AppColors.getSexualActivityLogColor(context),
-                          ),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    if (hasNote)
-                      Container(
-                        width: 4,
-                        height: 4,
-                        margin: const EdgeInsets.symmetric(horizontal: 1),
-                        decoration: BoxDecoration(
-                          color: _getMemoizedColor(
-                            context,
-                            'note_log',
-                            () => AppColors.getNoteLogColor(context),
-                          ),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+            // Symptom dots
+            SizedBox(
+              height: 5,
+              child: hasSymptoms
+                  ? _buildSymptomDots(
+                      data.symptoms[normalizedDate]!,
+                      colorScheme,
+                    )
+                  : const SizedBox.shrink(),
+            ),
           ],
         ),
       ),
     );
+
+    // Wrap with animation if needed
+    if (shouldAnimateToday) {
+      return AnimatedBuilder(
+        animation: _todayAnimation,
+        builder: (context, child) => Transform.scale(
+          scale: _todayAnimation.value,
+          child: child,
+        ),
+        child: cell,
+      );
+    }
+
+    return cell;
+  }
+
+  Widget _buildActivityIcon(SexualActivity activity, ColorScheme colorScheme) {
+    final iconSize = context.responsive.calendarActivityIconSize;
+    if (activity.protectionUsed) {
+      return Stack(
+        alignment: Alignment.center,
+        clipBehavior: Clip.none,
+        children: [
+          Icon(
+            Icons.favorite,
+            size: iconSize,
+            color: colorScheme.error.withValues(alpha: 0.8),
+          ),
+          Positioned(
+            right: -1,
+            bottom: -1,
+            child: Container(
+              padding: const EdgeInsets.all(0.5),
+              decoration: BoxDecoration(
+                color: colorScheme.surface,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.shield,
+                size: iconSize * 0.4,
+                color: colorScheme.primary,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    return Icon(
+      Icons.favorite,
+      size: iconSize,
+      color: colorScheme.error.withValues(alpha: 0.8),
+    );
+  }
+
+  Widget _buildSymptomDots(List<Symptom> symptoms, ColorScheme colorScheme) {
+    if (symptoms.isEmpty) return const SizedBox.shrink();
+
+    final count = symptoms.length.clamp(0, 3);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(
+        count,
+        (index) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 0.5),
+          child: Container(
+            width: 2.5,
+            height: 2.5,
+            decoration: BoxDecoration(
+              color: colorScheme.secondary,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color _getMoodColor(MoodType mood) {
+    switch (mood) {
+      case MoodType.happy:
+        return Colors.green;
+      case MoodType.calm:
+        return Colors.blue;
+      case MoodType.tired:
+        return Colors.grey;
+      case MoodType.sad:
+        return Colors.indigo;
+      case MoodType.irritable:
+        return Colors.orange;
+      case MoodType.anxious:
+        return Colors.purple;
+      case MoodType.energetic:
+        return Colors.amber;
+    }
   }
 
   Widget _buildLegend() {
@@ -547,8 +665,8 @@ class _CalendarViewState extends ConsumerState<_CalendarView> {
             border: border != null
                 ? Border.all(color: border, width: 2)
                 : Border.all(
-                    color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-                    width: 0.5,
+                    color: colorScheme.outline,
+                    width: 1,
                   ),
             borderRadius: BorderRadius.circular(6),
           ),
@@ -606,69 +724,40 @@ class _CalendarViewState extends ConsumerState<_CalendarView> {
         endDate: end,
       );
 
-      // Load user data for predictions
-      final userData = await _supabase.getUserData();
-      final lastPeriodStart = userData?['last_period_start'] != null
-          ? DateTime.parse(userData!['last_period_start'])
-          : null;
-      final averageCycleLength = userData?['average_cycle_length'] ?? 28;
-      final averagePeriodLength = userData?['average_period_length'] ?? 5;
-
       // Calculate period days
       final periodDays = <DateTime>{};
       for (final period in periods) {
         final periodStart = period.startDate;
         final periodEnd = period.endDate ?? DateTime.now();
 
+        debugPrint('📅 Period: ${period.id} from ${periodStart.toString()} to ${periodEnd.toString()}');
+        
         for (int i = 0; i <= periodEnd.difference(periodStart).inDays; i++) {
-          periodDays.add(
-            _normalizeDate(
-              DateTime(
-                periodStart.year,
-                periodStart.month,
-                periodStart.day + i,
-              ),
+          final day = _normalizeDate(
+            DateTime(
+              periodStart.year,
+              periodStart.month,
+              periodStart.day + i,
             ),
           );
+          periodDays.add(day);
+          debugPrint('  Adding period day: ${day.toString()}');
         }
       }
 
-      // Calculate predictions
-      final predictedPeriodDays = <DateTime>{};
-      final fertileDays = <DateTime>{};
-      final ovulationDays = <DateTime>{};
+      debugPrint('📊 Total period days loaded: ${periodDays.length}');
+      debugPrint('📊 Period days: ${periodDays.map((d) => DateFormat('MMM d').format(d)).join(', ')}');
 
-      if (lastPeriodStart != null) {
-        final today = DateTime.now();
-        final endDate = DateTime(today.year, today.month + 4, 1);
-        DateTime currentPrediction = lastPeriodStart;
+      // Get predictions from CycleAnalyzer (Phase 1 prediction engine)
+      final predictions = await CycleAnalyzer.getCurrentPrediction();
+      final predictedPeriodDays = predictions['predictedPeriodDays'] ?? <DateTime>{};
+      final fertileDays = predictions['fertileDays'] ?? <DateTime>{};
+      final ovulationDays = predictions['ovulationDays'] ?? <DateTime>{};
 
-        while (currentPrediction.isBefore(endDate)) {
-          if (currentPrediction.isAfter(
-            today.subtract(const Duration(days: 1)),
-          )) {
-            for (int i = 0; i < averagePeriodLength; i++) {
-              final day = currentPrediction.add(Duration(days: i));
-              predictedPeriodDays.add(_normalizeDate(day));
-            }
-
-            final ovulationDate = currentPrediction.add(
-              Duration(days: averageCycleLength - 14),
-            );
-            ovulationDays.add(_normalizeDate(ovulationDate));
-
-            for (int i = -5; i <= 0; i++) {
-              final fertileDay = ovulationDate.add(Duration(days: i));
-              if (!ovulationDays.contains(_normalizeDate(fertileDay))) {
-                fertileDays.add(_normalizeDate(fertileDay));
-              }
-            }
-          }
-          currentPrediction = currentPrediction.add(
-            Duration(days: averageCycleLength),
-          );
-        }
-      }
+      debugPrint('📊 CycleAnalyzer predictions loaded:');
+      debugPrint('   Predicted period days: ${predictedPeriodDays.length}');
+      debugPrint('   Ovulation days: ${ovulationDays.length}');
+      debugPrint('   Fertile days: ${fertileDays.length}');
 
       // Load daily logs in parallel using batch queries (performance optimization)
       final moods = <DateTime, Mood>{};
@@ -723,6 +812,591 @@ class _CalendarViewState extends ConsumerState<_CalendarView> {
 
   DateTime _normalizeDate(DateTime date) {
     return DateTime(date.year, date.month, date.day);
+  }
+
+  // Daily log preview widget
+  Widget _buildDailyLogPreview(DateTime date) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final dateKey = _normalizeDate(date);
+    final isToday = _normalizeDate(date) == _normalizeDate(DateTime.now());
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        border: Border(
+          top: BorderSide(color: colorScheme.outlineVariant, width: 1),
+        ),
+      ),
+      child: Column(
+        children: [
+          // Date header with gradient
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  colorScheme.primaryContainer,
+                  colorScheme.primaryContainer.withValues(alpha: 0.7),
+                ],
+              ),
+              border: Border(
+                bottom: BorderSide(color: colorScheme.outlineVariant, width: 0.5),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      DateFormat('EEEE').format(date),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                    Text(
+                      DateFormat('MMM d, yyyy').format(date),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ],
+                ),
+                if (isToday)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      'Today',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: colorScheme.onPrimary,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          // Daily logs content
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 12,
+                children: [
+                  // Mood Section
+                  _buildLogCard(
+                    context,
+                    ref.watch(moodStreamProvider(dateKey)),
+                    icon: Icons.mood,
+                    title: 'Mood',
+                    emptyText: 'No mood logged',
+                    builder: (mood) => Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _getMoodColor(mood.moodType).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: _getMoodColor(mood.moodType).withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        spacing: 6,
+                        children: [
+                          Icon(
+                            mood.moodType.icon,
+                            size: 18,
+                            color: _getMoodColor(mood.moodType),
+                          ),
+                          Text(
+                            mood.moodType.displayName,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: _getMoodColor(mood.moodType),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  
+                  // Symptoms Section
+                  _buildLogCard(
+                    context,
+                    ref.watch(symptomsStreamProvider(dateKey)),
+                    icon: Icons.medical_services_outlined,
+                    title: 'Symptoms',
+                    emptyText: 'No symptoms logged',
+                    builder: (symptoms) => Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: symptoms.map((s) {
+                        final severity = (s.severity ?? 3).clamp(1, 5);
+                        final severityLabel = ['Mild', 'Mild', 'Moderate', 'Severe', 'Severe'][severity - 1];
+                        final severityColor = [
+                          Colors.green,
+                          Colors.green,
+                          Colors.orange,
+                          Colors.deepOrange,
+                          Colors.red,
+                        ][severity - 1];
+                        
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: severityColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: severityColor.withValues(alpha: 0.3),
+                              width: 0.5,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            spacing: 4,
+                            children: [
+                              Text(
+                                s.symptomType.displayName,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: colorScheme.onSurface,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: severityColor.withValues(alpha: 0.3),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  severityLabel,
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w700,
+                                    color: severityColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  
+                  // Sexual Activity Section
+                  _buildLogCard(
+                    context,
+                    ref.watch(sexualActivityStreamProvider(dateKey)),
+                    icon: Icons.favorite_outline,
+                    title: 'Intimacy',
+                    emptyText: 'No activity logged',
+                    builder: (activity) => Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: (activity.protectionUsed ? Colors.green : Colors.orange)
+                            .withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: (activity.protectionUsed ? Colors.green : Colors.orange)
+                              .withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        spacing: 6,
+                        children: [
+                          Icon(
+                            activity.protectionUsed ? Icons.health_and_safety_sharp : Icons.warning_amber_rounded,
+                            size: 16,
+                            color: activity.protectionUsed ? Colors.green : Colors.orange,
+                          ),
+                          Text(
+                            activity.protectionUsed ? 'Protected' : 'Unprotected',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: activity.protectionUsed ? Colors.green : Colors.orange,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  
+                  // Notes Section
+                  _buildLogCard(
+                    context,
+                    ref.watch(noteStreamProvider(dateKey)),
+                    icon: Icons.note_outlined,
+                    title: 'Notes',
+                    emptyText: 'No notes',
+                    builder: (note) => Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: colorScheme.outlineVariant,
+                          width: 0.5,
+                        ),
+                      ),
+                      child: Text(
+                        note.content,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colorScheme.onSurface,
+                          height: 1.5,
+                        ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Enhanced log card builder
+  Widget _buildLogCard<T>(
+    BuildContext context,
+    AsyncValue<T?> asyncValue,
+    {
+      required IconData icon,
+      required String title,
+      required String emptyText,
+      required Widget Function(T data) builder,
+    }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return asyncValue.when(
+      data: (data) {
+        if (data == null) {
+          return Opacity(
+            opacity: 0.5,
+            child: Row(
+              children: [
+                Icon(icon, size: 16, color: colorScheme.onSurfaceVariant),
+                const SizedBox(width: 10),
+                Text(
+                  emptyText,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colorScheme.onSurfaceVariant,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 16, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: colorScheme.onSurface,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            builder(data),
+          ],
+        );
+      },
+      loading: () => SizedBox(
+        height: 24,
+        child: Center(
+          child: SizedBox(
+            width: 12,
+            height: 12,
+            child: CircularProgressIndicator(
+              strokeWidth: 1.5,
+              valueColor: AlwaysStoppedAnimation(colorScheme.primary),
+            ),
+          ),
+        ),
+      ),
+      error: (_, __) => Text(
+        'Couldn\'t load this',
+        style: TextStyle(fontSize: 11, color: colorScheme.error),
+      ),
+    );
+  }
+
+  // Toggle period for a date (double-tap action)
+  Future<void> _togglePeriodForDate(DateTime date, bool hasPeriod, CalendarData data) async {
+    HapticFeedback.mediumImpact();
+    final dateKey = _normalizeDate(date);
+    
+    try {
+      if (hasPeriod) {
+        // Find and remove this date from period
+        // For simplicity, we'll show a quick info that period can be edited via detail sheet
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Tap to view period details for ${DateFormat('MMM d').format(date)}'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        // Start a new period on this date
+        await _supabase.startPeriod(startDate: dateKey);
+        // Clear cache to refresh
+        _calendarDataCache.clear();
+        if (mounted) {
+          setState(() {});
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Couldn\'t save that - try again?')),
+        );
+      }
+    }
+  }
+
+  // Inline quick actions (long-press)
+  void _showInlineQuickActions(BuildContext context, DateTime date, CalendarData data) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final dateKey = _normalizeDate(date);
+    final currentMood = data.moods[dateKey];
+    final currentSymptoms = data.symptoms[dateKey] ?? [];
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: colorScheme.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle bar
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              DateFormat('EEEE, MMM d').format(date),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 20),
+            
+            // Inline Mood Selector
+            Text(
+              'Mood',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: MoodType.values.map((moodType) {
+                final isSelected = currentMood?.moodType == moodType;
+                return GestureDetector(
+                  onTap: () => _quickSaveMood(ctx, dateKey, moodType, currentMood),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? _getMoodColor(moodType).withValues(alpha: 0.2)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                      border: isSelected
+                          ? Border.all(color: _getMoodColor(moodType), width: 2)
+                          : null,
+                    ),
+                    child: Icon(
+                      moodType.icon,
+                      size: 28,
+                      color: _getMoodColor(moodType),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 20),
+            
+            // Inline Symptom Chips
+            Text(
+              'Symptoms',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: SymptomType.values.map((symptomType) {
+                final hasSymptom = currentSymptoms.any((s) => s.symptomType == symptomType);
+                return FilterChip(
+                  label: Text(symptomType.displayName),
+                  selected: hasSymptom,
+                  onSelected: (selected) => _quickToggleSymptom(
+                    ctx, dateKey, symptomType, hasSymptom, currentSymptoms,
+                  ),
+                  selectedColor: colorScheme.primaryContainer,
+                  checkmarkColor: colorScheme.primary,
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    color: hasSymptom ? colorScheme.onPrimaryContainer : colorScheme.onSurface,
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 20),
+            
+            // Period toggle button
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  final hasPeriod = data.periodDays.contains(dateKey);
+                  _togglePeriodForDate(date, hasPeriod, data);
+                },
+                icon: Icon(
+                  data.periodDays.contains(dateKey) 
+                      ? Icons.water_drop 
+                      : Icons.water_drop_outlined,
+                ),
+                label: Text(
+                  data.periodDays.contains(dateKey) 
+                      ? 'Period Logged' 
+                      : 'Log Period Start',
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.getMenstrualPhaseColor(context),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Quick save mood from inline selector
+  Future<void> _quickSaveMood(
+    BuildContext ctx,
+    DateTime dateKey,
+    MoodType moodType,
+    Mood? currentMood,
+  ) async {
+    HapticFeedback.selectionClick();
+    Navigator.pop(ctx);
+    
+    try {
+      if (currentMood?.moodType == moodType) {
+        // Same mood tapped = delete
+        await _supabase.deleteMood(currentMood!.id);
+      } else {
+        // Save new mood
+        await _supabase.saveMood(date: dateKey, mood: moodType);
+      }
+      // Clear cache and refresh
+      _calendarDataCache.clear();
+      if (mounted) setState(() {});
+    } catch (e) {
+      debugPrint('Error saving mood: $e');
+    }
+  }
+
+  // Quick toggle symptom from inline selector
+  Future<void> _quickToggleSymptom(
+    BuildContext ctx,
+    DateTime dateKey,
+    SymptomType symptomType,
+    bool hasSymptom,
+    List<Symptom> currentSymptoms,
+  ) async {
+    HapticFeedback.selectionClick();
+    Navigator.pop(ctx);
+    
+    try {
+      if (hasSymptom) {
+        // Remove symptom
+        final symptom = currentSymptoms.firstWhere((s) => s.symptomType == symptomType);
+        await _supabase.deleteSymptom(symptom.id);
+      } else {
+        // Add symptom with default severity
+        final types = [...currentSymptoms.map((s) => s.symptomType), symptomType];
+        final severities = <SymptomType, int>{};
+        for (var s in currentSymptoms) {
+          severities[s.symptomType] = s.severity ?? 3;
+        }
+        severities[symptomType] = 3; // Default severity
+        await _supabase.saveSymptoms(
+          date: dateKey,
+          symptomTypes: types,
+          severities: severities,
+        );
+      }
+      // Clear cache and refresh
+      _calendarDataCache.clear();
+      if (mounted) setState(() {});
+    } catch (e) {
+      debugPrint('Error toggling symptom: $e');
+    }
   }
 
   // Memoized color getter to avoid repeated theme context lookups

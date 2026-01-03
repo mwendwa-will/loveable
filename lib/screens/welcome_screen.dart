@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:lovely/constants/app_colors.dart';
 import 'package:lovely/screens/auth/login.dart';
+import 'package:lovely/screens/auth/signup.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -60,7 +61,7 @@ class WelcomeScreen extends StatelessWidget {
 
                   // Subtitle
                   Text(
-                    'Your journey to wellness and self-care starts here',
+                    'Your wellness journey starts here ✨',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: isDark ? Colors.white70 : AppColors.textMediumGray,
                       height: 1.5,
@@ -104,22 +105,20 @@ class WelcomeScreen extends StatelessWidget {
               Semantics(
                 button: true,
                 enabled: true,
-                hint: 'Navigate to login screen',
+                hint: 'Navigate to signup screen',
                 child: SizedBox(
                   width: double.infinity,
                   height: 56,
-                  child: ElevatedButton(
+                  child: FilledButton(
                     onPressed: () {
                       Navigator.of(context).pushReplacement(
                         MaterialPageRoute(
-                          builder: (context) => const LoginScreen(),
+                          builder: (context) => const SignUpScreen(),
                         ),
                       );
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),

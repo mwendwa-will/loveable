@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:lovely/services/supabase_service.dart';
+import 'package:lovely/services/cycle_analyzer.dart';
 import 'package:lovely/screens/main/home_screen.dart';
+import 'package:lovely/models/period.dart';
+import 'package:lovely/core/feedback/feedback_service.dart';
+import 'package:lovely/core/exceptions/app_exceptions.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -22,7 +26,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _averagePeriodLength = 5;
   DateTime? _lastPeriodStart;
   bool _notificationsEnabled = true;
-  String _userName = '';
   bool _isLoading = true;
 
   @override
@@ -31,46 +34,66 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _loadUserData();
   }
 
-  Future<void> _loadUserData() async {
-    try {
-      // Wait a bit for auth state to settle
-      await Future.delayed(const Duration(milliseconds: 100));
-
-      final user = SupabaseService().currentUser;
-      if (user != null) {
-        setState(() {
-          _userName = user.userMetadata?['name'] as String? ?? '';
-          _isLoading = false;
-        });
-      } else {
-        // If still no user, retry once
-        await Future.delayed(const Duration(milliseconds: 500));
-        final retryUser = SupabaseService().currentUser;
-        setState(() {
-          _userName = retryUser?.userMetadata?['name'] as String? ?? '';
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() => _isLoading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading user data: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
   }
 
+  Future<void> _loadUserData() async {
+    try {
+      final supabaseService = SupabaseService();
+      
+      debugPrint('🔍 Loading user data...');
+      
+      // Wait a bit for auth state to settle
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      var user = supabaseService.currentUser;
+      
+      if (user != null) {
+        debugPrint('✅ User loaded: ${user.email}');
+        debugPrint('🔑 Session: ${supabaseService.currentSession != null ? 'Valid' : 'None'}');
+        setState(() {
+          _isLoading = false;
+        });
+      } else {
+        // If still no user, retry once with session refresh
+        debugPrint('⚠️ No user found, retrying with session refresh...');
+        await Future.delayed(const Duration(milliseconds: 500));
+        
+        try {
+          await supabaseService.client.auth.refreshSession();
+        } catch (e) {
+          debugPrint('⚠️ Session refresh failed: $e');
+        }
+        
+        user = supabaseService.currentUser;
+        if (user != null) {
+          debugPrint('✅ User loaded after refresh: ${user.email}');
+        } else {
+          debugPrint('❌ Still no user after refresh');
+        }
+        
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading user data: $e');
+      setState(() => _isLoading = false);
+      if (mounted) {
+        FeedbackService.showError(context, e);
+      }
+    }
+  }
+
   void _nextPage() {
+    // Validate current page before proceeding
+    if (!_validateCurrentPage()) {
+      return;
+    }
+
     if (_currentPage < _totalPages - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
@@ -79,6 +102,39 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     } else {
       _finishOnboarding();
     }
+  }
+
+  bool _validateCurrentPage() {
+    String? errorMessage;
+
+    switch (_currentPage) {
+      case 0: // Profile page - no required fields
+        return true;
+      
+      case 1: // Cycle info page - validate cycle lengths
+        if (_averageCycleLength < 21 || _averageCycleLength > 35) {
+          errorMessage = 'Let\'s keep cycle length between 21-35 days 📅';
+        } else if (_averagePeriodLength < 2 || _averagePeriodLength > 10) {
+          errorMessage = 'Period length works best between 2-10 days ✨';
+        }
+        break;
+      
+      case 2: // Last period page - require date
+        if (_lastPeriodStart == null) {
+          errorMessage = 'We need your last period date to get started 📅';
+        }
+        break;
+      
+      case 3: // Notifications page - no required fields
+        return true;
+    }
+
+    if (errorMessage != null) {
+      FeedbackService.showWarning(context, errorMessage);
+      return false;
+    }
+
+    return true;
   }
 
   void _previousPage() {
@@ -92,25 +148,104 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _finishOnboarding() async {
     try {
-      final user = SupabaseService().currentUser;
+      setState(() => _isLoading = true);
+      
+      final supabaseService = SupabaseService();
+      
+      // Get current user with retry logic
+      var user = supabaseService.currentUser;
+      
+      // If no user, try refreshing session
       if (user == null) {
-        throw Exception('Please log in again to continue');
+        debugPrint('⚠️ No current user, attempting session refresh...');
+        try {
+          await supabaseService.client.auth.refreshSession();
+          user = supabaseService.currentUser;
+          debugPrint('✅ Session refreshed, user: ${user?.email}');
+        } catch (e) {
+          debugPrint('❌ Session refresh failed: $e');
+        }
+      }
+      
+      // If still no user, fail
+      if (user == null) {
+        debugPrint('❌ No authenticated user found after refresh');
+        throw AuthException.sessionExpired();
       }
 
-      // Get name from state or user metadata
-      final name = _userName.isNotEmpty
-          ? _userName
-          : (user.userMetadata?['name'] as String? ?? 'User');
+      debugPrint('✅ User found: ${user.email}');
 
+      // Get username and names from metadata
+      var username = user.userMetadata?['username'] as String?;
+      var firstName = user.userMetadata?['first_name'] as String?;
+      var lastName = user.userMetadata?['last_name'] as String?;
+      
+      debugPrint('🔍 Username from metadata: $username');
+      debugPrint('🔍 First name from metadata: $firstName');
+      debugPrint('🔍 Last name from metadata: $lastName');
+      
+      // If username not in metadata, try to get it from the database
+      if (username == null || username.isEmpty) {
+        debugPrint('⚠️ Username not in metadata, querying database...');
+        final userData = await supabaseService.getUserData();
+        username = userData?['username'] as String?;
+        firstName ??= userData?['first_name'] as String?;
+        lastName ??= userData?['last_name'] as String?;
+        debugPrint('🔍 Username from database: $username');
+      }
+      
+      // Username is required
+      if (username == null || username.isEmpty) {
+        throw AuthException('Username not found. Please sign up again.', code: 'AUTH_009');
+      }
+
+      debugPrint('💾 Saving onboarding data for user: $username');
+      
       // Save user data to Supabase
-      await SupabaseService().saveUserData(
-        name: name,
+      await supabaseService.saveUserData(
+        username: username,
+        firstName: firstName,
+        lastName: lastName,
         dateOfBirth: _dateOfBirth,
         averageCycleLength: _averageCycleLength,
         averagePeriodLength: _averagePeriodLength,
         lastPeriodStart: _lastPeriodStart,
         notificationsEnabled: _notificationsEnabled,
       );
+
+      debugPrint('✅ Onboarding data saved successfully');
+
+      // ✨ If last period start is recent (within average period length), create an active period record
+      if (_lastPeriodStart != null) {
+        final daysSinceStart = DateTime.now().difference(_lastPeriodStart!).inDays;
+        // Use user's average period length instead of hardcoded 7 days
+        if (daysSinceStart <= _averagePeriodLength) {
+          try {
+            debugPrint('📅 Last period is recent ($daysSinceStart days ago, threshold: $_averagePeriodLength days), creating active period record...');
+            // Start with light intensity by default, user can update in DailyLogScreen
+            await supabaseService.startPeriod(
+              startDate: _lastPeriodStart!,
+              intensity: FlowIntensity.light,
+            );
+            debugPrint('✅ Active period record created');
+          } catch (e) {
+            debugPrint('⚠️ Error creating period record: $e');
+            // Don't block navigation if this fails
+          }
+        }
+      }
+
+      // ✨ Generate initial predictions (Instance 3: First Forecast)
+      try {
+        final userId = supabaseService.currentUser?.id;
+        if (userId != null) {
+          await CycleAnalyzer.generateInitialPredictions(userId);
+          debugPrint('✅ Initial predictions generated');
+        }
+      } catch (e) {
+        debugPrint('⚠️ Error generating predictions: $e');
+        // Don't block navigation if prediction fails
+      }
 
       if (mounted) {
         // Navigate to home screen
@@ -120,13 +255,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         );
       }
     } catch (e) {
+      debugPrint('❌ Onboarding error: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to save data: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        setState(() => _isLoading = false);
+        FeedbackService.showError(context, e);
       }
     }
   }
@@ -196,9 +328,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                   if (_currentPage > 0) const SizedBox(width: 16),
                   Expanded(
-                    child: ElevatedButton(
+                    child: FilledButton(
                       onPressed: _nextPage,
-                      style: ElevatedButton.styleFrom(
+                      style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -206,7 +338,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                       child: Text(
                         _currentPage == _totalPages - 1
-                            ? 'Get Started'
+                            ? 'Let\'s Go! 🎉'
                             : 'Next',
                         style: const TextStyle(
                           fontSize: 16,
@@ -229,8 +361,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final displayName = _userName.isNotEmpty ? _userName : 'there';
-
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
       child: Column(
@@ -250,7 +380,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             child: Center(
               child: FaIcon(
-                FontAwesomeIcons.cakeCandles,
+                FontAwesomeIcons.heart,
                 size: 40,
                 color: Theme.of(context).colorScheme.primary,
               ),
@@ -259,7 +389,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(height: 32),
 
           Text(
-            'Welcome, $displayName!',
+            'Welcome to Lovely! ✨',
             style: Theme.of(
               context,
             ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
@@ -268,65 +398,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(height: 8),
 
           Text(
-            "Let's set up your profile",
+            "Let's personalize your wellness journey",
             style: Theme.of(
               context,
             ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 48),
+          const SizedBox(height: 32),
 
           Text(
-            'When is your birthday?',
+            "We\'re here to support your cycle tracking, mood patterns, and overall wellness.\n\nYou can update everything anytime in Settings - this is just the beginning!",
             style: Theme.of(
               context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 16),
-
-          // Date of birth
-          InkWell(
-            onTap: () async {
-              final date = await showDatePicker(
-                context: context,
-                initialDate: DateTime.now().subtract(
-                  const Duration(days: 365 * 25),
-                ),
-                firstDate: DateTime(1900),
-                lastDate: DateTime.now(),
-              );
-              if (date != null) {
-                setState(() => _dateOfBirth = date);
-              }
-            },
-            child: InputDecorator(
-              decoration: InputDecoration(
-                labelText: 'Date of Birth',
-                prefixIcon: const Icon(FontAwesomeIcons.calendar, size: 20),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: Theme.of(context).colorScheme.primary,
-                    width: 2,
-                  ),
-                ),
-              ),
-              child: Text(
-                _dateOfBirth != null
-                    ? DateFormat('MMM dd, yyyy').format(_dateOfBirth!)
-                    : 'Select your date of birth',
-                style: TextStyle(
-                  color: _dateOfBirth != null ? null : Colors.grey[600],
-                ),
-              ),
-            ),
+            ).textTheme.bodyMedium?.copyWith(color: Colors.grey[700]),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -370,7 +455,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(height: 8),
 
           Text(
-            'Help us track your cycle accurately',
+            'Let\'s learn about your cycle',
             style: Theme.of(
               context,
             ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
@@ -504,13 +589,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(height: 8),
 
           Text(
-            'When did your last period start?',
+            'When did your last period begin? *',
             style: Theme.of(
               context,
             ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 48),
+          const SizedBox(height: 8),
+
+          Text(
+            '* Required',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.primary,
+              fontStyle: FontStyle.italic,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
 
           InkWell(
             onTap: () async {
@@ -576,7 +673,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'This helps us predict your next cycle',
+                    'This helps us predict your cycle and give you personalized insights ✨',
                     style: TextStyle(color: Colors.blue[900], fontSize: 14),
                   ),
                 ),

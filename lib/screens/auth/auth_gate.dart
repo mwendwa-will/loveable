@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lovely/providers/period_provider.dart';
+import 'package:lovely/screens/auth/email_verification_pending_screen.dart';
 import 'package:lovely/screens/main/home_screen.dart';
 import 'package:lovely/screens/onboarding/onboarding_screen.dart';
 import 'package:lovely/screens/welcome_screen.dart';
@@ -33,19 +34,38 @@ class AuthGate extends ConsumerWidget {
     final session = supabase.currentSession;
 
     if (session != null) {
+      // Check if email verification is required
+      if (supabase.requiresVerification) {
+        return const EmailVerificationPendingScreen();
+      }
+
       // User has a valid session - check onboarding status
       return FutureBuilder<bool>(
         future: supabase.hasCompletedOnboarding(),
         builder: (context, snapshot) {
           // Show loading indicator while checking onboarding status
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
+            return Scaffold(
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Loading Lovely...',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
             );
           }
 
           // Handle errors gracefully - fallback to home screen
           if (snapshot.hasError) {
+            debugPrint('⚠️ Error checking onboarding: ${snapshot.error}');
             return const HomeScreen();
           }
 

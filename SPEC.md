@@ -49,28 +49,34 @@ A comprehensive women's wellness app that combines health tracking, task managem
 - [x] Email/Password login
 - [x] Email/Password signup
 - [x] Social login (Google, Facebook, Apple)
-- [ ] Forgot password flow
-- [ ] Email verification
-- [ ] Onboarding questionnaire
+- [x] Forgot password flow
+- [x] Email verification
+- [x] Onboarding questionnaire
   - Age
   - Cycle tracking preferences
   - Health goals
   - Notification preferences
 
 ### 3.2 Health Tracking
-- [ ] **Period/Cycle Tracking**
+- [x] **Period/Cycle Tracking**
   - Cycle calendar view
   - Period start/end logging
   - Cycle predictions
   - Fertile window indicators
-  - Cycle phase education
+  - Cycle phase visualization
 
-- [ ] **Symptom Logging**
-  - Mood tracking (happy, sad, anxious, energetic, etc.)
-  - Physical symptoms (cramps, headache, bloating, etc.)
-  - Energy levels (1-5 scale)
-  - Sleep quality
-  - Custom symptoms
+- [x] **Symptom Logging**
+  - Mood tracking (7 types: happy, calm, tired, sad, irritable, anxious, energetic)
+  - Physical symptoms (8 types: cramps, headache, fatigue, bloating, nausea, back pain, breast tenderness, acne)
+  - Symptom severity (1-5 scale)
+  - Real-time mood icons with color coding
+  - Mood/symptom indicators on calendar
+
+- [x] **Intimate Activity Tracking**
+  - Sexual activity logging
+  - Protection method tracking (condom, birth control, IUD, withdrawal, other)
+  - Protection status indicator (heart + shield icon)
+  - Private, discreet indicators
 
 - [ ] **Health Metrics**
   - Water intake tracker
@@ -146,7 +152,7 @@ A comprehensive women's wellness app that combines health tracking, task managem
 - [x] Dark/Light mode (auto-detect)
 - [ ] Dark/Light mode manual toggle
 - [ ] Notification preferences
-- [ ] Data privacy settings
+- [x] Data privacy settings (PIN lock)
 - [ ] Profile management
 - [ ] Cycle settings (average length, period duration)
 - [ ] Data export/backup
@@ -204,6 +210,14 @@ Welcome Screen → Login Screen → Home Screen
 #### Home Screen
 - Daily affirmation card
 - Cycle status widget
+- **Week Strip** (new):
+  - 7-day view with swipe navigation
+  - Phase-colored date circles
+  - Mood icons (color-coded)
+  - Symptom indicators (1-3 dots)
+  - Sexual activity heart icon with protection badge
+  - Tap date for full day details
+  - Long press for quick add menu
 - Quick actions (log symptom, add task, log water)
 - Today's tasks preview (3 most important)
 - Streak counter
@@ -211,7 +225,23 @@ Welcome Screen → Login Screen → Home Screen
 
 #### Calendar Screen
 - Monthly calendar view
-- Period tracking interface
+- **Calendar Indicators** (new):
+  - Phase background colors
+  - Mood icons
+  - Symptom dots
+  - Sexual activity indicators
+  - Responsive cell sizing per device
+  - Tap date for day details bottom sheet
+  - Long press for quick add menu
+
+#### Day Detail Bottom Sheet (new)
+- Full day information view
+- Mood display with color badge
+- Symptom list with severity (1-5)
+- Sexual activity with protection status
+- Notes/journal entry
+- Edit button to navigate to full DailyLogScreen
+- Real-time stream-based data
 - Symptom logging modal
 - Cycle predictions visualization
 - Phase education tooltips
@@ -344,14 +374,15 @@ class WaterIntake {
 - [ ] `firebase_core` - FCM setup
 - [ ] `firebase_messaging` - Push notifications only
 - [ ] `intl` - Date formatting
-- [ ] `provider` or `riverpod` - State management
+- [x] `riverpod` - State management (PIN lock, providers)
 - [ ] `table_calendar` - Calendar widget
 - [ ] `fl_chart` - Charts/graphs
-- [ ] `local_auth` - Biometric authentication
+- [x] `local_auth` - Biometric authentication (infrastructure ready)
 - [ ] `share_plus` - Social sharing
 - [ ] `pdf` - Report generation
 - [ ] `flutter_local_notifications` - Local notification display
-- [ ] `crypto` - Data encryption
+- [x] `crypto` - SHA-256 PIN hashing
+- [x] `flutter_secure_storage` - Encrypted PIN storage
 
 ### 6.2 Backend Architecture
 
@@ -574,14 +605,19 @@ CREATE POLICY "Anyone can view affirmations" ON affirmations
 ## 9. Privacy & Security
 
 ### Data Protection:
-- End-to-end encryption for sensitive health data
-- Local data encryption
-- Biometric authentication option
+- [x] **App-Specific PIN Lock** - 4-digit PIN to protect sensitive health data
+  - SHA-256 hashed PIN storage
+  - Auto-lock when app goes to background
+  - Encrypted storage via flutter_secure_storage
+  - Independent of device PIN/biometric for enhanced security
+- [ ] End-to-end encryption for sensitive health data
+- [ ] Local data encryption
+- [ ] Biometric authentication option (infrastructure ready)
 - No data sharing with third parties
 - GDPR/HIPAA compliant
 - Clear privacy policy
-- Data export capability
-- Account deletion with full data removal
+- [ ] Data export capability
+- [x] Account deletion with full data removal
 
 ### Permissions:
 - Notifications (optional)

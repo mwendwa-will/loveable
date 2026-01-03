@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lovely/screens/main/home_screen.dart';
-import 'package:lovely/providers/calendar_provider.dart';
 
 void main() {
   group('HomeScreen Widget Tests', () {
