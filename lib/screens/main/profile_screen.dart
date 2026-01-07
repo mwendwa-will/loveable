@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:lovely/services/supabase_service.dart';
 import 'package:lovely/services/pin_service.dart';
-import 'package:lovely/screens/welcome_screen.dart';
 import 'package:lovely/constants/app_colors.dart';
 import 'package:lovely/utils/responsive_utils.dart';
 import 'package:lovely/screens/settings/edit_profile_screen.dart';
@@ -96,10 +95,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       try {
         await SupabaseService().signOut();
         if (context.mounted) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-            (route) => false,
-          );
+          Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
         }
       } catch (e) {
         if (context.mounted) {
@@ -984,12 +980,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (!context.mounted) return;
       Navigator.pop(context);
 
-      // Navigate to welcome screen
+      // Navigate to auth (will show login)
       if (!context.mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-        (route) => false,
-      );
+      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
     } catch (e) {
       // Close progress dialog if still open
       if (context.mounted && Navigator.of(context).canPop()) {

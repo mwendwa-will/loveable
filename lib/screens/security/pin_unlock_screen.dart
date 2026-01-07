@@ -6,7 +6,9 @@ import 'package:lovely/constants/app_colors.dart';
 import 'package:lovely/utils/responsive_utils.dart';
 
 class PinUnlockScreen extends StatefulWidget {
-  const PinUnlockScreen({super.key});
+  final VoidCallback? onUnlocked;
+
+  const PinUnlockScreen({super.key, this.onUnlocked});
 
   @override
   State<PinUnlockScreen> createState() => _PinUnlockScreenState();
@@ -78,7 +80,13 @@ class _PinUnlockScreenState extends State<PinUnlockScreen> {
     if (isCorrect) {
       HapticFeedback.mediumImpact();
       if (mounted) {
-        Navigator.pop(context, true);
+        debugPrint('✅ PIN verified successfully');
+        // Call callback if provided (from main.dart)
+        // This will handle unlocking and navigation
+        widget.onUnlocked?.call();
+        
+        // If not opened as a route (i.e., initial widget), nothing more needed
+        // If opened as a route, the onUnlocked callback should pop
       }
     } else {
       HapticFeedback.heavyImpact();

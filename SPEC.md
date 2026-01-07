@@ -79,10 +79,16 @@ A comprehensive women's wellness app that combines health tracking, task managem
   - Private, discreet indicators
 
 - [ ] **Health Metrics**
-  - Water intake tracker
-  - Weight tracking (optional)
-  - Temperature logging
-  - Exercise/activity logging
+  - [ ] Water intake tracker (model exists, UI pending)
+  - [ ] Weight tracking (optional)
+  - [ ] Temperature logging
+  - [ ] Exercise/activity logging
+
+- [x] **Daily Notes/Journal**
+  - Journal entries for each day
+  - Notes attached to specific dates
+  - Free-text note field
+  - Real-time saving
 
 ### 3.3 Task Reminders
 - [ ] **Task Management**
@@ -198,53 +204,62 @@ Welcome Screen → Login Screen → Home Screen
 - Sessions expire after 30 days or on explicit logout
 - Auto-refresh mechanism maintains session validity
 
-### 4.2 Main Navigation (Bottom Tab Bar)
-1. **Home** - Dashboard with affirmation & quick stats
-2. **Calendar** - Cycle tracking & symptom logging
-3. **Tasks** - Task list & reminders
-4. **Insights** - Analytics & reports
-5. **Profile** - Settings & user preferences
+### 4.2 Main Navigation (Floating Action Buttons)
+**Note:** App currently uses floating action buttons instead of bottom tab bar for navigation:
+1. **Home** (default) - Week strip, cycle dashboard, predictions
+2. **Calendar** (FAB) - Full month view with symptom logging
+3. **Daily Log** (FAB) - Comprehensive daily logging screen
+4. **Profile** (FAB) - Settings & user preferences
+
+**Not Yet Implemented:**
+- Tasks screen
+- Insights/Analytics screen
 
 ### 4.3 Screen Details
 
 #### Home Screen
-- Daily affirmation card
-- Cycle status widget
-- **Week Strip** (new):
-  - 7-day view with swipe navigation
-  - Phase-colored date circles
-  - Mood icons (color-coded)
-  - Symptom indicators (1-3 dots)
-  - Sexual activity heart icon with protection badge
-  - Tap date for full day details
-  - Long press for quick add menu
-- Quick actions (log symptom, add task, log water)
-- Today's tasks preview (3 most important)
-- Streak counter
-- Motivational messages
+- [ ] Daily affirmation card (not implemented)
+- [x] Cycle status widget (current phase, days tracking)
+- [x] **Week Strip**:
+  - [x] 7-day view with swipe navigation
+  - [x] Phase-colored date circles
+  - [x] Mood icons (color-coded)
+  - [x] Symptom indicators (1-3 dots)
+  - [x] Sexual activity heart icon with protection badge
+  - [x] Tap date for full day details
+  - [x] Long press for quick add menu
+- [x] **Cycle Predictions Card** (next period, fertile window, ovulation)
+- [x] Email verification banner
+- [ ] Quick actions (log symptom, add task, log water) - partial (log period button)
+- [ ] Today's tasks preview
+- [ ] Streak counter
+- [ ] Motivational messages
 
 #### Calendar Screen
-- Monthly calendar view
-- **Calendar Indicators** (new):
-  - Phase background colors
-  - Mood icons
-  - Symptom dots
-  - Sexual activity indicators
-  - Responsive cell sizing per device
-  - Tap date for day details bottom sheet
-  - Long press for quick add menu
+- [x] Monthly calendar view
+- [x] **Calendar Indicators**:
+  - [x] Phase background colors (period, fertile, ovulation, luteal)
+  - [x] Mood icons (7 types with colors)
+  - [x] Symptom dots (up to 3 visible)
+  - [x] Sexual activity indicators (heart with shield for protected)
+  - [x] Responsive cell sizing per device
+  - [x] Tap date for day details bottom sheet
+  - [x] Long press for quick add menu
+- [x] Month navigation (swipe left/right)
+- [x] Stream-based real-time updates
 
-#### Day Detail Bottom Sheet (new)
-- Full day information view
-- Mood display with color badge
-- Symptom list with severity (1-5)
-- Sexual activity with protection status
-- Notes/journal entry
-- Edit button to navigate to full DailyLogScreen
-- Real-time stream-based data
-- Symptom logging modal
-- Cycle predictions visualization
-- Phase education tooltips
+#### Day Detail Bottom Sheet
+- [x] Full day information view
+- [x] Mood display with color badge and icon
+- [x] Symptom list with severity (1-5 scale)
+- [x] Sexual activity with protection status
+- [x] Notes/journal entry display
+- [x] Edit button to navigate to full DailyLogScreen
+- [x] Real-time stream-based data
+- [x] Quick add buttons for mood/symptoms
+- [x] Phase indicator
+- [ ] Cycle predictions visualization (on home screen instead)
+- [ ] Phase education tooltips
 
 #### Tasks Screen
 - Task list (today, upcoming, completed)
@@ -261,33 +276,76 @@ Welcome Screen → Login Screen → Home Screen
 - Task completion statistics
 - Export data button
 
+#### Settings Screens
+- [x] **Edit Profile Screen**
+  - [x] First name, last name, username fields
+  - [x] Date of birth (optional)
+  - [x] Profile photo (placeholder)
+  - [x] Username availability check
+  - [x] Save/cancel actions
+
+- [x] **Change Password Screen**
+  - [x] Current password verification
+  - [x] New password with confirmation
+  - [x] Password strength validation
+  - [x] Show/hide password toggles
+
+- [x] **Notifications Settings Screen**
+  - [x] Period reminders toggle
+  - [x] Symptom reminders toggle
+  - [x] Daily check-in toggle
+  - [x] Tips & insights toggle
+  - [x] Master notification toggle
+
+- [x] **Cycle Settings Screen**
+  - [x] Average cycle length adjustment
+  - [x] Average period length adjustment
+  - [x] Last period start date
+  - [x] Save changes functionality
+
+- [x] **Security Screens**
+  - [x] PIN Setup Screen (4-digit with confirmation)
+  - [x] PIN Unlock Screen (auto-lock with timeout)
+
 #### Profile Screen
-- User info
-- Settings sections:
-  - Account
-  - Notifications
-  - Cycle Settings
-  - Privacy & Security
-  - About
-- Sign out button
+- [x] User info (name, email, profile completion percentage)
+- [x] Settings sections:
+  - [x] Profile Management (Edit Profile with avatar)
+  - [x] Your Wellness (Cycle Settings, Pregnancy Mode)
+  - [x] Preferences (Notifications, Theme - auto only)
+  - [x] Privacy & Security (PIN Lock, Account Deletion)
+  - [x] Support & Legal (Help, Privacy Policy, Terms)
+  - [x] Account Actions (Sign Out, Delete Account)
+- [x] Pull-to-refresh functionality
+- [x] Card-based UI with color coding
+- [x] Profile completion tracking
 
 ---
 
 ## 5. Data Models
 
-### 5.1 User
+### 5.1 User (Implemented ✅)
 ```dart
 class User {
   String id;
   String email;
-  String name;
-  DateTime dateOfBirth;
-  int averageCycleLength; // days
-  int averagePeriodLength; // days
+  String? name;
+  String? firstName;
+  String? lastName;
+  String? username;
+  DateTime? dateOfBirth;
+  int averageCycleLength; // days (default 28)
+  int averagePeriodLength; // days (default 5)
   DateTime? lastPeriodStart;
   bool notificationsEnabled;
-  String preferredTheme; // 'light', 'dark', 'system'
+  String? preferredTheme; // 'light', 'dark', 'system'
+  bool pregnancyMode;
+  DateTime? conceptionDate;
+  DateTime? dueDate;
+  Map<String, dynamic>? notificationPreferences;
+  String? fcmToken;
   DateTime createdAt;
+  DateTime updatedAt;
 }
 ```
 
@@ -304,20 +362,82 @@ class CycleLog {
 }
 ```
 
-### 5.3 Symptom
+### 5.3 Mood (Implemented ✅)
+```dart
+class Mood {
+  String id;
+  String userId;
+  DateTime date;
+  MoodType type; // happy, calm, tired, sad, irritable, anxious, energetic
+  String? notes;
+  DateTime createdAt;
+}
+```
+
+### 5.4 Symptom (Implemented ✅)
 ```dart
 class Symptom {
   String id;
   String userId;
   DateTime date;
-  String type; // 'mood', 'physical', 'energy'
-  String value; // e.g., 'happy', 'cramps', '4/5'
-  int? severity; // 1-5 scale
+  SymptomType type; // cramps, headache, fatigue, bloating, nausea, backPain, breastTenderness, acne
+  int severity; // 1-5 scale (mild to extreme)
   String? notes;
+  DateTime createdAt;
 }
 ```
 
-### 5.4 Task
+### 5.5 Sexual Activity (Implemented ✅)
+```dart
+class SexualActivity {
+  String id;
+  String userId;
+  DateTime date;
+  bool protectionUsed;
+  ProtectionType? protectionType; // condom, birthControl, iud, withdrawal, other
+  String? notes;
+  DateTime createdAt;
+}
+```
+
+### 5.6 Note (Implemented ✅)
+```dart
+class Note {
+  String id;
+  String userId;
+  DateTime date;
+  String content;
+  DateTime createdAt;
+  DateTime updatedAt;
+}
+```
+
+### 5.7 Period (Implemented ✅)
+```dart
+class Period {
+  String id;
+  String userId;
+  DateTime startDate;
+  DateTime? endDate;
+  FlowIntensity? flowIntensity; // light, moderate, heavy
+  DateTime createdAt;
+  DateTime updatedAt;
+}
+```
+
+### 5.8 Cycle (Implemented ✅)
+```dart
+class Cycle {
+  String id;
+  String userId;
+  DateTime startDate;
+  DateTime? endDate;
+  int? lengthDays;
+  DateTime createdAt;
+}
+```
+
+### 5.9 Task (Not Implemented)
 ```dart
 class Task {
   String id;
@@ -337,7 +457,7 @@ class Task {
 }
 ```
 
-### 5.5 Affirmation
+### 5.10 Affirmation (Not Implemented)
 ```dart
 class Affirmation {
   String id;
@@ -350,7 +470,7 @@ class Affirmation {
 }
 ```
 
-### 5.6 WaterIntake
+### 5.11 WaterIntake (Not Implemented)
 ```dart
 class WaterIntake {
   String id;
@@ -365,24 +485,60 @@ class WaterIntake {
 
 ## 6. Technical Requirements
 
+### 6.0 Widgets & Components Implemented
+
+#### Reusable Widgets (✅ Implemented):
+- [x] **AppDialog** - Standardized confirmation/alert dialogs
+- [x] **AppBottomSheet** - Standardized modal bottom sheets
+- [x] **MoodPicker** - Bottom sheet for selecting mood (7 types)
+- [x] **SymptomPicker** - Bottom sheet with search for symptom selection
+- [x] **DayDetailBottomSheet** - Full day information modal
+- [x] **PredictionCard** - Cycle predictions display (next period, fertile window, ovulation)
+- [x] **EmailVerificationBanner** - Verification reminder with resend
+- [x] **UserAvatar** - Profile photo placeholder
+- [x] **OverlayNotification** - Toast-style notifications
+
+#### Services (✅ Implemented):
+- [x] **SupabaseService** - Complete database operations
+- [x] **NotificationService** - FCM integration
+- [x] **PinService** - PIN security with SHA-256 hashing
+- [x] **CycleAnalyzer** - Cycle predictions and phase calculations
+- [x] **FeedbackService** - Error handling and user feedback
+
+#### Providers (✅ Implemented - Riverpod):
+- [x] **PeriodProvider** - Period tracking state
+- [x] **DailyLogProvider** - Daily data streams (moods, symptoms, notes, activities)
+- [x] **CalendarProvider** - Calendar data and navigation
+- [x] **NotificationProvider** - Notification preferences
+- [x] **ProfileProvider** - User profile state
+- [x] **PinLockProvider** - PIN lock state management
+
+#### Utilities (✅ Implemented):
+- [x] **ResponsiveSizing** - Device-aware sizing (small/medium/large/tablet breakpoints)
+- [x] **CycleUtils** - Cycle phase calculations
+- [x] **AppColors** - Theme-aware color system
+
 ### 6.1 Dependencies
-- [x] `google_fonts` - Typography
-- [x] `font_awesome_flutter` - Icons
-- [ ] `supabase_flutter` - Backend (Auth, Database, Storage)
+- [x] `google_fonts` - Typography (Inter font)
+- [x] `font_awesome_flutter` - Decorative icons
+- [x] `supabase_flutter` - Backend (Auth, Database, Storage)
 - [ ] `shared_preferences` - Local storage
 - [ ] `sqflite` - Local database/cache
-- [ ] `firebase_core` - FCM setup
-- [ ] `firebase_messaging` - Push notifications only
-- [ ] `intl` - Date formatting
-- [x] `riverpod` - State management (PIN lock, providers)
-- [ ] `table_calendar` - Calendar widget
+- [x] `firebase_core` - FCM setup
+- [x] `firebase_messaging` - Push notifications
+- [x] `intl` - Date formatting
+- [x] `flutter_riverpod` - State management (providers throughout app)
+- [ ] `table_calendar` - Calendar widget (built custom calendar instead)
 - [ ] `fl_chart` - Charts/graphs
 - [x] `local_auth` - Biometric authentication (infrastructure ready)
 - [ ] `share_plus` - Social sharing
 - [ ] `pdf` - Report generation
-- [ ] `flutter_local_notifications` - Local notification display
+- [x] `flutter_local_notifications` - Local notification display
+- [x] `awesome_notifications` - Rich local notifications
 - [x] `crypto` - SHA-256 PIN hashing
 - [x] `flutter_secure_storage` - Encrypted PIN storage
+- [x] `mockito` - Testing mocks
+- [x] `build_runner` - Code generation
 
 ### 6.2 Backend Architecture
 
@@ -608,6 +764,7 @@ CREATE POLICY "Anyone can view affirmations" ON affirmations
 - [x] **App-Specific PIN Lock** - 4-digit PIN to protect sensitive health data
   - SHA-256 hashed PIN storage
   - Auto-lock when app goes to background
+  - **Automatic timeout logout** (30 minutes) - like banking apps
   - Encrypted storage via flutter_secure_storage
   - Independent of device PIN/biometric for enhanced security
 - [ ] End-to-end encryption for sensitive health data
@@ -632,43 +789,93 @@ CREATE POLICY "Anyone can view affirmations" ON affirmations
 - [x] Authentication screens (Welcome, Login, Sign Up)
 - [x] Theme implementation
 - [x] Accessibility setup
-- [ ] Home screen with basic layout
+- [x] Home screen with week strip and cycle dashboard
 - [ ] Simple task list
 - [ ] Basic affirmation display
-- [ ] Bottom navigation
+- [ ] Bottom navigation (navigation via floating buttons instead)
 
 ### Phase 2: Core Features (Weeks 4-6)
-- [ ] Cycle tracking calendar
-- [ ] Symptom logging
+- [x] Cycle tracking calendar (full month view with indicators)
+- [x] Symptom logging (mood + physical symptoms with severity)
 - [ ] Task CRUD operations
 - [ ] Affirmation library
-- [ ] Local storage implementation
-- [ ] Firebase integration
+- [x] Database implementation (Supabase)
+- [x] Firebase integration (FCM for notifications)
 
 ### Phase 3: Advanced Features (Weeks 7-9)
-- [ ] Analytics dashboard
-- [ ] Insights generation
-- [ ] Streak tracking
-- [ ] Custom affirmations
-- [ ] Notifications system
-- [ ] Data export
+- [ ] Analytics dashboard (not implemented)
+- [x] Insights generation (CycleAnalyzer service with predictions)
+- [ ] Streak tracking (not implemented)
+- [ ] Custom affirmations (not implemented)
+- [x] Notifications system (FCM infrastructure, NotificationService, local notifications)
+- [x] Data export (account deletion with data removal implemented, CSV/PDF export pending)
+- [x] **Additional Advanced Features Completed:**
+  - [x] Pregnancy mode tracking
+  - [x] PIN security with timeout logout
+  - [x] Responsive design system
+  - [x] Real-time data streaming with Riverpod
+  - [x] Profile completion tracking
+  - [x] Cycle phase predictions
+  - [x] Comprehensive settings screens
 
 ### Phase 4: Polish & Launch (Weeks 10-12)
-- [ ] Onboarding flow
+- [x] Onboarding flow (basic implementation)
 - [ ] Tutorial/walkthrough
 - [ ] Performance optimization
-- [ ] Testing (unit, widget, integration)
+- [x] Testing (unit, widget, integration - partial)
+  - [x] Widget tests (WelcomeScreen, HomeScreen, CalendarScreen)
+  - [x] Unit tests (models, cycle calculations, app colors)
+  - [x] Service tests (CycleAnalyzer with mocks)
+  - [x] Widget component tests (MoodPicker, SymptomPicker, AppDialog, AppBottomSheet, PredictionCard)
+  - [x] Integration tests (app flow, cycle tracking)
+  - [ ] Full test coverage (currently partial)
 - [ ] App store assets
 - [ ] Beta testing
 - [ ] Launch!
 
 ---
 
+## 10.1 Testing Implementation
+
+### Unit Tests (✅ Implemented):
+- `test/unit/models_test.dart` - Data model tests
+- `test/unit/cycle_calculations_test.dart` - Cycle logic tests
+- `test/unit/app_colors_test.dart` - Theme color tests
+
+### Widget Tests (✅ Implemented):
+- `test/widget/welcome_screen_test.dart` - Welcome screen rendering
+- `test/widget/home_screen_test.dart` - Home screen components
+- `test/widget/calendar_screen_test.dart` - Calendar functionality
+
+### Component Tests (✅ Implemented):
+- `test/widgets/mood_picker_test.dart` - 5 tests (selection, search, display)
+- `test/widgets/symptom_picker_test.dart` - 9 tests (selection, severity, search)
+- `test/widgets/app_dialog_test.dart` - Dialog component tests
+- `test/widgets/app_bottom_sheet_test.dart` - Bottom sheet tests
+- `test/widgets/prediction_card_test.mocks.dart` - Mock generation
+
+### Service Tests (✅ Implemented):
+- `test/services/cycle_analyzer_test.dart` - Cycle prediction logic
+- `test/services/cycle_analyzer_test.mocks.dart` - Service mocks
+
+### Integration Tests (✅ Implemented):
+- `test/integration/app_integration_test.dart` - Full app flow
+- `test/integration/cycle_tracking_integration_test.dart` - Cycle tracking end-to-end
+- `test/integration/prediction_flow_test.dart` - Prediction flow (has errors)
+
+### Test Coverage Status:
+- ✅ Widget tests passing
+- ✅ Unit tests passing
+- ✅ Component tests passing (14 total)
+- ✅ Service tests passing with mocks
+- ⚠️ Integration tests (some with errors)
+- 📊 Coverage: ~60-70% estimated (aim for 80%+)
+
 ## 11. Future Enhancements (Post-Launch)
 
 - [ ] Community forum (anonymous)
 - [ ] Expert articles/blog
-- [ ] Pregnancy mode
+- [x] Pregnancy mode (basic implementation with conception/due date tracking)
 - [ ] Partner sharing (optional cycle sharing)
 - [ ] Apple Health / Google Fit integration
 - [ ] Wearable device sync

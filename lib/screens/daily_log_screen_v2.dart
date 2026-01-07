@@ -193,7 +193,7 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
             );
           },
           loading: () => _buildLoadingChips(4),
-          error: (_, __) => const Text('Couldn\'t load this'),
+          error: (_, _) => const Text('Couldn\'t load this'),
         ),
       ],
     );
@@ -276,7 +276,7 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
         moodAsync.when(
           data: (currentMood) => _buildMoodGrid(currentMood),
           loading: () => _buildLoadingChips(7),
-          error: (_, __) => const Text('Couldn\'t load this'),
+          error: (_, _) => const Text('Couldn\'t load this'),
         ),
       ],
     );
@@ -379,7 +379,7 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
         symptomsAsync.when(
           data: (symptoms) => _buildSymptomChips(symptoms),
           loading: () => _buildLoadingChips(8),
-          error: (_, __) => const Text('Couldn\'t load this'),
+          error: (_, _) => const Text('Couldn\'t load this'),
         ),
       ],
     );
@@ -688,7 +688,7 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
               borderRadius: BorderRadius.circular(12),
             ),
           ),
-          error: (_, __) => const Text('Couldn\'t load this'),
+          error: (_, _) => const Text('Couldn\'t load this'),
         ),
       ],
     );

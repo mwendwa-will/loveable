@@ -14,7 +14,7 @@ Lovely is a privacy-focused wellness app that combines period tracking, task man
 - **Email Verification** - 7-day grace period with verification reminders
 - **Personalized Onboarding** - Collects essential cycle information during first-time setup
 - **Profile Management** - User profile with settings and account management
-- **App-Specific PIN Security** - 4-digit PIN lock with SHA-256 hashing, auto-lock on background, encrypted storage
+- **App-Specific PIN Security** - 4-digit PIN lock with SHA-256 hashing, auto-lock on background, encrypted storage, **30-minute timeout logout** (banking app behavior)
 - **Period Logging** - Start/end period tracking with flow intensity
 - **Mood Tracking** - Daily mood logging with 7 emotional states via bottom sheet picker
 - **Symptom Tracking** - Log 8 different symptoms with severity levels (1-5 scale)

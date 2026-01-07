@@ -407,7 +407,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(height: 32),
 
           Text(
-            "We\'re here to support your cycle tracking, mood patterns, and overall wellness.\n\nYou can update everything anytime in Settings - this is just the beginning!",
+            "We're here to support your cycle tracking, mood patterns, and overall wellness.\n\nYou can update everything anytime in Settings - this is just the beginning!",
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: Colors.grey[700]),

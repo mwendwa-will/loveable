@@ -1,84 +1,149 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lovely/providers/period_provider.dart';
-import 'package:lovely/screens/auth/email_verification_pending_screen.dart';
+import 'package:lovely/providers/auth_provider.dart';
 import 'package:lovely/screens/main/home_screen.dart';
 import 'package:lovely/screens/onboarding/onboarding_screen.dart';
-import 'package:lovely/screens/welcome_screen.dart';
+import 'package:lovely/screens/auth/welcome_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// AuthGate: Authentication Gateway
 ///
-/// This widget implements persistent authentication by checking for existing
-/// Supabase sessions on app launch. It routes users to the appropriate screen:
-///
-/// Flow:
-/// 1. App launches → AuthGate checks for currentSession
-/// 2. If session exists → Check onboarding status
-///    - Onboarding complete → Navigate to HomeScreen
-///    - Onboarding incomplete → Navigate to OnboardingScreen
-/// 3. If no session → Navigate to WelcomeScreen for login
-///
-/// Session Persistence:
-/// - Supabase automatically stores auth tokens in device storage
-/// - Android: SharedPreferences (survives cache clear, lost on data clear)
-/// - iOS: UserDefaults (survives cache clear, lost on data clear)
-/// - Sessions auto-refresh for 30 days, then require re-login
+/// Routes users based on authentication and onboarding status:
+/// - Not authenticated → WelcomeScreen
+/// - Authenticated but not onboarded → OnboardingScreen
+/// - Authenticated and onboarded → HomeScreen
 class AuthGate extends ConsumerWidget {
   const AuthGate({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final supabase = ref.read(supabaseServiceProvider);
+    // Watch auth state stream for real-time updates
+    final authState = ref.watch(authStateProvider);
 
-    // Check for existing session
-    final session = supabase.currentSession;
-
-    if (session != null) {
-      // Check if email verification is required
-      if (supabase.requiresVerification) {
-        return const EmailVerificationPendingScreen();
-      }
-
-      // User has a valid session - check onboarding status
-      return FutureBuilder<bool>(
-        future: supabase.hasCompletedOnboarding(),
-        builder: (context, snapshot) {
-          // Show loading indicator while checking onboarding status
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Scaffold(
-              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const CircularProgressIndicator(),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Loading Lovely...',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
+    return authState.when(
+      // Loading state - show splash screen
+      loading: () => Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                'Loading Lovely...',
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
-            );
-          }
+            ],
+          ),
+        ),
+      ),
 
-          // Handle errors gracefully - fallback to home screen
-          if (snapshot.hasError) {
-            debugPrint('⚠️ Error checking onboarding: ${snapshot.error}');
-            return const HomeScreen();
-          }
+      // Error state - show error message
+      error: (error, stackTrace) {
+        debugPrint('❌ Auth error: $error');
+        return Scaffold(
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Authentication Error',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Please try again later.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
 
-          // Route based on onboarding completion
-          final hasCompletedOnboarding = snapshot.data ?? false;
-          return hasCompletedOnboarding
-              ? const HomeScreen()
-              : const OnboardingScreen();
-        },
-      );
+      // Data state - check if authenticated
+      data: (state) {
+        final session = state.session;
+
+        // No session - show welcome screen
+        if (session == null) {
+          return const WelcomeScreen();
+        }
+
+        // Has session - check onboarding status
+        return _OnboardingGate(session: session);
+      },
+    );
+  }
+}
+
+/// Onboarding gateway - checks if user has completed onboarding
+class _OnboardingGate extends StatelessWidget {
+  final Session session;
+
+  const _OnboardingGate({required this.session});
+
+  @override
+  Widget build(BuildContext context) {
+    final supabase = Supabase.instance.client;
+
+    return FutureBuilder<bool>(
+      future: _checkOnboarding(supabase),
+      builder: (context, snapshot) {
+        // Show loading indicator while checking onboarding status
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Scaffold(
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Loading Lovely...',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // Handle errors gracefully - fallback to home screen
+        if (snapshot.hasError) {
+          debugPrint('⚠️ Error checking onboarding: ${snapshot.error}');
+          return const HomeScreen();
+        }
+
+        // Route based on onboarding completion
+        final hasCompletedOnboarding = snapshot.data ?? false;
+        return hasCompletedOnboarding
+            ? const HomeScreen()
+            : const OnboardingScreen();
+      },
+    );
+  }
+
+  /// Helper to check if user completed onboarding
+  Future<bool> _checkOnboarding(SupabaseClient supabase) async {
+    try {
+      final response = await supabase
+          .from('users')
+          .select('onboarding_completed')
+          .eq('id', session.user.id)
+          .single();
+      return response['onboarding_completed'] == true;
+    } catch (e) {
+      debugPrint('Error checking onboarding: $e');
+      return false;
     }
-
-    // No session found - show welcome/login screen
-    return const WelcomeScreen();
   }
 }

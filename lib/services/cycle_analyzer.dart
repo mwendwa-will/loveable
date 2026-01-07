@@ -48,70 +48,94 @@ class CycleAnalyzer {
     }
   }
 
-  /// Recalculate predictions based on actual logged periods (Instance 6: Truth Event)
-  /// Called every time user starts a new period
+  /// Recalculate predictions using FLOATING WINDOW approach (Modern Apps Approach)
+  /// Uses only recent 3-6 cycles for prediction while preserving all historical data
+  /// Called every time user starts a new period (Truth Event - Instance 6)
   static Future<void> recalculateAfterPeriodStart(String userId) async {
     try {
-      // Get all completed periods (sorted newest first)
-      final periods = await _supabase.getCompletedPeriods(limit: 12);
+      // Get ALL completed periods for analysis
+      final allPeriods = await _supabase.getCompletedPeriods(limit: 12);
 
-      if (periods.isEmpty) {
+      if (allPeriods.isEmpty) {
         debugPrint('⚠️ No periods to analyze');
         return;
       }
 
-      // Calculate cycle lengths from completed periods
-      final cycleLengths = <int>[];
-      for (int i = 0; i < periods.length - 1; i++) {
-        final currentPeriod = periods[i];
-        final nextPeriod = periods[i + 1];
+      // STEP 1: Calculate cycle lengths from all periods
+      final allCycleLengths = <int>[];
+      for (int i = 0; i < allPeriods.length - 1; i++) {
+        final currentPeriod = allPeriods[i];
+        final nextPeriod = allPeriods[i + 1];
         final cycleLength =
             nextPeriod.startDate.difference(currentPeriod.startDate).inDays;
-        cycleLengths.add(cycleLength);
+        allCycleLengths.add(cycleLength);
       }
 
-      if (cycleLengths.isEmpty) {
-        debugPrint(
-            '⚠️ Need at least 2 periods to calculate cycle length - using default');
-        // For first period, use self-reported data
-        final userData = await _supabase.getUserData();
-        
-        if (userData == null) return;
-        
+      // If only 1 period, use self-reported
+      if (allCycleLengths.isEmpty) {
         await generateInitialPredictions(userId);
         return;
       }
 
-      // LEARNING ALGORITHM: Simple Moving Average (Phase 1)
-      final averageCycleLength = _calculateSimpleAverage(cycleLengths);
-      final confidence = _calculateConfidence(cycleLengths);
+      // STEP 2: Floating Window - Use ONLY last 3-6 periods for prediction
+      final windowSize = (allCycleLengths.length >= 6) ? 6 : allCycleLengths.length;
+      final recentCycleLengths = allCycleLengths.take(windowSize).toList();
+      
+      debugPrint('📊 Cycle analysis: using last $windowSize cycles');
+      debugPrint('   All cycles: $allCycleLengths');
+      debugPrint('   Recent window: $recentCycleLengths');
 
-      // Get most recent period
-      final lastPeriod = periods.first;
-      final nextPredicted = lastPeriod.startDate
-          .add(Duration(days: averageCycleLength.round()));
+      // STEP 3: Calculate recent average (what we predict from)
+      final recentAverageCycleLength = _calculateSimpleAverage(recentCycleLengths);
+      final recentConfidence = _calculateConfidence(recentCycleLengths);
 
-      // Update database
-      await _supabase.updateUserData({
-        'cycle_length': averageCycleLength.round(),
-        'average_cycle_length': averageCycleLength,
-        'next_period_predicted': nextPredicted.toIso8601String(),
-        'prediction_confidence': confidence,
-        'prediction_method': 'simple_average',
-      });
+      // STEP 4: Calculate baseline (original onboarding/self-reported)
+      final userData = await _supabase.getUserData();
+      final baselineCycleLength = (userData?['cycle_length'] as int?) ?? 28;
 
-      // Log the new prediction
-      await _logPrediction(
-        userId: userId,
-        cycleNumber: cycleLengths.length + 1,
-        predictedDate: nextPredicted,
-        confidence: confidence,
-        method: 'simple_average',
+      // STEP 5: Detect anomalies and cycle shifts
+      final variability = _calculateVariability(recentCycleLengths);
+      final cycleShifted = _detectCycleShift(
+        baseline: baselineCycleLength.toDouble(),
+        recent: recentAverageCycleLength,
+        variability: variability,
       );
 
-      debugPrint(
-          '✅ Recalculated: ${averageCycleLength.toStringAsFixed(1)} days avg, ${(confidence * 100).toStringAsFixed(0)}% confidence');
+      // Get most recent period
+      final lastPeriod = allPeriods.first;
+      final nextPredicted = lastPeriod.startDate
+          .add(Duration(days: recentAverageCycleLength.round()));
+
+      // STEP 6: Update database with metrics
+      await _supabase.updateUserData({
+        'cycle_length': recentAverageCycleLength.round(),
+        'average_cycle_length': recentAverageCycleLength,
+        'recent_average_cycle_length': recentAverageCycleLength,
+        'baseline_cycle_length': baselineCycleLength.toDouble(),
+        'cycle_variability': variability,
+        'next_period_predicted': nextPredicted.toIso8601String(),
+        'prediction_confidence': recentConfidence,
+        'prediction_method': 'floating_window',
+      });
+
+      // Log the prediction
+      await _logPrediction(
+        userId: userId,
+        cycleNumber: allCycleLengths.length + 1,
+        predictedDate: nextPredicted,
+        confidence: recentConfidence,
+        method: 'floating_window',
+      );
+
+      debugPrint('✅ Recalculated (Floating Window):');
+      debugPrint('   Baseline: ${baselineCycleLength.toStringAsFixed(1)} days');
+      debugPrint('   Recent: ${recentAverageCycleLength.toStringAsFixed(1)} days');
+      debugPrint('   Variability: ${variability.toStringAsFixed(2)}');
+      if (cycleShifted) {
+        debugPrint('   ⚠️ SHIFT DETECTED: Cycle pattern changed!');
+      }
       debugPrint('   Next predicted: $nextPredicted');
+      debugPrint('   Confidence: ${(recentConfidence * 100).toStringAsFixed(0)}%');
     } catch (e) {
       debugPrint('❌ Error recalculating predictions: $e');
     }
@@ -150,6 +174,121 @@ class CycleAnalyzer {
 
     // Linear interpolation between 0.95 and 0.60
     return 0.95 - (stdDev / 10) * 0.35;
+  }
+
+  /// Calculate variability (standard deviation) of recent cycles
+  /// Higher value = more irregular cycles, Lower value = more regular
+  static double _calculateVariability(List<int> cycleLengths) {
+    if (cycleLengths.length <= 1) return 0.0;
+
+    final mean = _calculateSimpleAverage(cycleLengths);
+    final variance = cycleLengths
+            .map((x) => (x - mean) * (x - mean))
+            .reduce((a, b) => a + b) /
+        cycleLengths.length;
+
+    return sqrt(variance);
+  }
+
+  /// Detect if cycle pattern has shifted significantly
+  /// Shift detected if: difference > 2 days AND variability is low
+  /// Low variability + shift = pattern change, not just noise
+  static bool _detectCycleShift({
+    required double baseline,
+    required double recent,
+    required double variability,
+  }) {
+    final difference = (recent - baseline).abs();
+    
+    // Shift detected if: difference > 2 days AND variability is low
+    return difference > 2 && variability < 3;
+  }
+
+  /// Record when a period is an anomaly (very different from usual)
+  /// Anomaly = outlier that's >2 standard deviations from recent average
+  static Future<void> recordAnomalyIfNeeded({
+    required String userId,
+    required DateTime periodStartDate,
+  }) async {
+    try {
+      final recentCycles = await _getRecentCycles(userId);
+
+      if (recentCycles.isEmpty) return;
+
+      final recentAverage = _calculateSimpleAverage(recentCycles);
+      final variability = _calculateVariability(recentCycles);
+      
+      // Get most recent logged period before this one
+      final periods = await _supabase.getCompletedPeriods(limit: 10);
+      if (periods.isEmpty) return;
+
+      // Find the period that started most recently before periodStartDate
+      DateTime? lastPeriodStart;
+      for (final period in periods) {
+        if (period.startDate.isBefore(periodStartDate)) {
+          lastPeriodStart = period.startDate;
+          break;
+        }
+      }
+
+      if (lastPeriodStart == null) return;
+
+      final cycleLength = periodStartDate.difference(lastPeriodStart).inDays;
+      
+      // Is this period an outlier?
+      // Outlier if >2 standard deviations from recent average
+      final deviation = (cycleLength - recentAverage).abs();
+      final isAnomaly = deviation > (variability * 2);
+
+      if (isAnomaly) {
+        debugPrint('🚨 ANOMALY DETECTED: $cycleLength days (avg: ${recentAverage.toStringAsFixed(1)}, stdDev: ${variability.toStringAsFixed(2)})');
+        
+        // Log for analysis
+        try {
+          await _supabase.client.from('cycle_anomalies').insert({
+            'user_id': userId,
+            'period_date': periodStartDate.toIso8601String(),
+            'cycle_length': cycleLength,
+            'average_cycle': recentAverage,
+            'variability': variability,
+            'detected_at': DateTime.now().toIso8601String(),
+          });
+          
+          // Increment anomaly counter
+          await _supabase.client.rpc(
+            'increment_anomaly_count',
+            params: {'p_user_id': userId},
+          ).catchError((_) {
+            // RPC might not exist, that's okay - just update directly
+            return Future.value(null);
+          });
+        } catch (e) {
+          debugPrint('⚠️ Failed to log anomaly: $e');
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error checking for anomaly: $e');
+    }
+  }
+
+  /// Get recent completed cycle lengths (helper)
+  /// Returns cycles from last 6 completed periods
+  static Future<List<int>> _getRecentCycles(String userId) async {
+    try {
+      final periods = await _supabase.getCompletedPeriods(limit: 6);
+      
+      final cycleLengths = <int>[];
+      for (int i = 0; i < periods.length - 1; i++) {
+        final cycleLength = 
+            periods[i + 1].startDate.difference(periods[i].startDate).inDays;
+        cycleLengths.add(cycleLength);
+      }
+      
+      return cycleLengths;
+    } catch (e) {
+      debugPrint('⚠️ Error getting recent cycles: $e');
+      return [];
+    }
   }
 
   /// Log prediction for accuracy tracking

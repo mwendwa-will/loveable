@@ -15,6 +15,7 @@ import 'package:lovely/constants/app_colors.dart';
 import 'package:lovely/utils/responsive_utils.dart';
 import 'package:lovely/services/cycle_analyzer.dart';
 import 'package:intl/intl.dart';
+import 'package:lovely/widgets/cycle_insights.dart';
 import 'package:lovely/widgets/prediction_card.dart';
 import 'package:lovely/core/feedback/feedback_service.dart';
 
@@ -1535,7 +1536,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: Column(
                 children: [
                   _buildWeekStrip(),
-                  const PredictionCard(), // ✨ NEW: Show prediction with confidence
+                  const PredictionCard(), // ✨ Show prediction with confidence
+                  const CycleInsights(), // ✨ Show cycle shift insights
                   _buildCycleCard(),
                   _buildMoodSection(),
                   _buildSymptomsSection(),

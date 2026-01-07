@@ -36,6 +36,11 @@ Added comprehensive tracking features and UI component standards to the Lovely p
   - iOS: Keychain with kSecAttrAccessible protection
 - **App-Specific**: Independent of device PIN/biometric for maximum privacy
 - **No Cloud Sync**: PIN stored only on local device
+- **Timeout Logout**: Automatic logout after 30 minutes of inactivity (banking app behavior)
+  - Timestamp tracked when app goes to background
+  - On resume, checks elapsed time
+  - If > 30 minutes, user is logged out with security message
+  - Prevents unauthorized access to sensitive health data
 
 **User Experience:**
 - **Setup Flow**:
@@ -46,9 +51,13 @@ Added comprehensive tracking features and UI component standards to the Lovely p
 
 - **Lock Behavior**:
   - Auto-locks when app enters background (paused/inactive state)
-  - Requires PIN entry on app resume
+  - Saves lock timestamp for timeout tracking
+  - On resume:
+    - If locked < 30 minutes: Shows PIN unlock screen
+    - If locked ≥ 30 minutes: **Automatic logout** with security message
   - Prevents back navigation during unlock (can't bypass)
   - Failed attempts tracked with error animation
+  - Clears timestamp on successful unlock
 
 - **UI Features**:
   - Circular number pad (0-9) with haptic feedback

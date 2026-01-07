@@ -7,8 +7,10 @@ import 'package:lovely/screens/auth/auth_gate.dart';
 import 'package:lovely/screens/security/pin_unlock_screen.dart';
 import 'package:lovely/services/supabase_service.dart';
 import 'package:lovely/services/notification_service.dart';
+import 'package:lovely/services/pin_service.dart';
 import 'package:lovely/providers/pin_lock_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_auth_ui/supabase_auth_ui.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -73,11 +75,44 @@ class LovelyApp extends ConsumerStatefulWidget {
 }
 
 class _LovelyAppState extends ConsumerState<LovelyApp> with WidgetsBindingObserver {
+  late Future<void> _pinCheckFuture;
+  bool _pinEnabled = false;
+  bool _pinUnlocked = false;
+
   @override
   void initState() {
     super.initState();
     _setupAuthListener();
     WidgetsBinding.instance.addObserver(this);
+    
+    // Check PIN after first frame (gives Android time to initialize)
+    _pinCheckFuture = Future.delayed(const Duration(milliseconds: 100)).then((_) async {
+      if (!mounted) return;
+      
+      try {
+        final pinService = PinService();
+        final isEnabled = await pinService.isPinEnabled();
+        debugPrint('🔐 PIN enabled check: $isEnabled');
+        if (mounted) {
+          setState(() {
+            _pinEnabled = isEnabled;
+            if (isEnabled) {
+              pinService.saveLockTimestamp();
+              debugPrint('✅ PIN check complete - PIN enabled');
+            } else {
+              _pinUnlocked = true; // No PIN, proceed immediately
+              debugPrint('✅ PIN check complete - PIN disabled');
+            }
+          });
+        }
+      } catch (e, stack) {
+        debugPrint('⚠️ PIN check error: $e');
+        debugPrint('Stack: $stack');
+        if (mounted) {
+          setState(() => _pinEnabled = false);
+        }
+      }
+    });
   }
 
   @override
@@ -143,14 +178,19 @@ class _LovelyAppState extends ConsumerState<LovelyApp> with WidgetsBindingObserv
       if (mounted && navigatorKey.currentContext != null) {
         Navigator.of(navigatorKey.currentContext!).push(
           MaterialPageRoute(
-            builder: (context) => const PinUnlockScreen(),
+            builder: (context) => PinUnlockScreen(
+              onUnlocked: () async {
+                // Unlock in provider
+                await ref.read(pinLockProvider.notifier).unlock();
+                // Pop the PIN screen
+                if (mounted && navigatorKey.currentContext != null) {
+                  Navigator.of(navigatorKey.currentContext!).pop(true);
+                }
+              },
+            ),
             fullscreenDialog: true,
           ),
-        ).then((unlocked) {
-          if (unlocked == true) {
-            ref.read(pinLockProvider.notifier).unlock();
-          }
-        });
+        );
       }
     });
   }
@@ -230,7 +270,40 @@ class _LovelyAppState extends ConsumerState<LovelyApp> with WidgetsBindingObserv
       ),
       themeMode: ThemeMode.system, // Restored to system
       navigatorKey: navigatorKey,
-      home: const AuthGate(),
+      home: FutureBuilder<void>(
+        future: _pinCheckFuture,
+        builder: (context, snapshot) {
+          // While checking PIN, show loading
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            );
+          }
+          
+          // PIN check complete
+          // If PIN enabled and not yet unlocked, show PIN screen
+          if (_pinEnabled && !_pinUnlocked) {
+            debugPrint('🔒 Showing PIN unlock screen (initial)');
+            return PinUnlockScreen(
+              onUnlocked: () {
+                debugPrint('🔓 PIN unlocked via callback');
+                if (mounted) {
+                  setState(() {
+                    _pinUnlocked = true;
+                    debugPrint('✅ PIN state updated: _pinUnlocked = true');
+                  });
+                }
+              },
+            );
+          }
+          
+          // PIN unlocked or not enabled, show main app
+          debugPrint('🚀 Showing AuthGate');
+          return const AuthGate();
+        },
+      ),
     );
   }
 }

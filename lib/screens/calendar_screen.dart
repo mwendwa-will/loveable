@@ -1144,7 +1144,7 @@ class _CalendarViewState extends ConsumerState<_CalendarView> with SingleTickerP
           ),
         ),
       ),
-      error: (_, __) => Text(
+      error: (_, _) => Text(
         'Couldn\'t load this',
         style: TextStyle(fontSize: 11, color: colorScheme.error),
       ),

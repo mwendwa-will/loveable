@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../services/cycle_analyzer.dart';
 import '../constants/app_colors.dart';
+import '../providers/period_provider.dart';
 
 /// Widget that displays next period prediction with confidence
-/// Uses CycleAnalyzer for accurate real-time predictions
+/// Uses CycleAnalyzer with floating window approach for accurate predictions
+/// Shows both current prediction and baseline for context
 class PredictionCard extends ConsumerWidget {
   const PredictionCard({super.key});
 
@@ -33,119 +35,70 @@ class PredictionCard extends ConsumerWidget {
         if (futurePeriods.isEmpty) return const SizedBox.shrink();
         final nextPredicted = futurePeriods.first;
         
-        // Calculate confidence based on data availability (simple heuristic for Phase 1)
-        final confidence = 0.75; // Default medium-high confidence
-        final method = 'cycle_analyzer';
+        // Get user data for baseline comparison
+        final userDataAsync = ref.watch(userDataProvider);
 
-        final daysUntil = nextPredicted.difference(now).inDays;
+        return userDataAsync.when(
+          data: (userData) {
+            final confidence = (userData?['prediction_confidence'] as num?)?.toDouble() ?? 0.75;
+            final method = userData?['prediction_method'] as String? ?? 'floating_window';
 
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          elevation: 2,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.getPeriodColor(context).withValues(alpha: 0.1),
-                  Theme.of(context).colorScheme.surface,
-                ],
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.getPeriodColor(context)
-                              .withValues(alpha: 0.2),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.calendar_today,
-                          size: 20,
-                          color: AppColors.getPeriodColor(context),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Next Period Prediction',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                            ),
-                            Text(
-                              _getMethodDescription(method),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(
-                                    color: AppColors.getTextSecondaryColor(context),
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
+            final daysUntil = nextPredicted.difference(now).inDays;
+            final baselineNextPeriod = _calculateBaselinePrediction(userData);
+            final baselineDifferent = baselineNextPeriod != null && 
+                !DateUtils.isSameDay(baselineNextPeriod, nextPredicted);
+
+            return Card(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              elevation: 2,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.getPeriodColor(context).withValues(alpha: 0.15),
+                      AppColors.getOvulationColor(context).withValues(alpha: 0.1),
                     ],
                   ),
-                  const SizedBox(height: 16),
-
-                  // Main prediction text
-                  Text(
-                    _getPredictionText(daysUntil, confidence),
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontSize: 16,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Date
-                  Row(
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        Icons.event,
-                        size: 16,
-                        color: AppColors.getTextSecondaryColor(context),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        DateFormat('EEEE, MMMM d').format(nextPredicted),
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).textTheme.bodyMedium?.color,
-                              fontWeight: FontWeight.w600,
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.getPeriodColor(context)
+                                  .withValues(alpha: 0.2),
+                              shape: BoxShape.circle,
                             ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Confidence indicator
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            child: Icon(
+                              Icons.calendar_today,
+                              size: 20,
+                              color: AppColors.getPeriodColor(context),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Confidence',
+                                  'Next Period Prediction',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                ),
+                                Text(
+                                  _getMethodDescription(method),
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodySmall
@@ -153,30 +106,154 @@ class PredictionCard extends ConsumerWidget {
                                         color: AppColors.getTextSecondaryColor(context),
                                       ),
                                 ),
-                                Text(
-                                  '${(confidence * 100).toStringAsFixed(0)}%',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                        color: _getConfidenceColor(confidence, context),
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Main prediction text
+                      Text(
+                        _getPredictionText(daysUntil, confidence),
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              fontSize: 16,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Date
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.event,
+                            size: 16,
+                            color: AppColors.getTextSecondaryColor(context),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            DateFormat('EEEE, MMMM d').format(nextPredicted),
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Theme.of(context).textTheme.bodyMedium?.color,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ],
+                      ),
+
+                      // Baseline comparison if different
+                      if (baselineDifferent) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.amber.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Baseline prediction (for reference):',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Colors.grey[600],
+                                  fontSize: 11,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                DateFormat('EEEE, MMMM d').format(baselineNextPeriod),
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Colors.grey[600],
+                                  decoration: TextDecoration.lineThrough,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      const SizedBox(height: 16),
+
+                      // Confidence indicator
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Confidence',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: AppColors.getTextSecondaryColor(context),
+                                          ),
+                                    ),
+                                    Text(
+                                      '${(confidence * 100).toStringAsFixed(0)}%',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: _getConfidenceColor(confidence, context),
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: LinearProgressIndicator(
+                                    value: confidence,
+                                    minHeight: 6,
+                                    backgroundColor: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.grey.shade800
+                                        : Colors.grey.shade200,
+                                    valueColor: AlwaysStoppedAnimation(
+                                      _getConfidenceColor(confidence, context),
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 4),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(4),
-                              child: LinearProgressIndicator(
-                                value: confidence,
-                                minHeight: 6,
-                                backgroundColor: Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.grey.shade800
-                                    : Colors.grey.shade200,
-                                valueColor: AlwaysStoppedAnimation(
-                                  _getConfidenceColor(confidence, context),
-                                ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // Info tooltip
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.lightbulb_outline,
+                              size: 16,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _getConfidenceTip(confidence),
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Theme.of(context).colorScheme.primary,
+                                      fontSize: 12,
+                                    ),
                               ),
                             ),
                           ],
@@ -184,43 +261,30 @@ class PredictionCard extends ConsumerWidget {
                       ),
                     ],
                   ),
-
-                  const SizedBox(height: 12),
-
-                  // Info tooltip
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.lightbulb_outline,
-                          size: 16,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            _getConfidenceTip(confidence),
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontSize: 12,
-                                ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
+          loading: () => const SizedBox.shrink(),
+          error: (_, _) => const SizedBox.shrink(),
         );
       },
     );
+  }
+
+  DateTime? _calculateBaselinePrediction(Map<String, dynamic>? userData) {
+    if (userData == null) return null;
+
+    final lastPeriodStart = userData['last_period_start'];
+    if (lastPeriodStart == null) return null;
+
+    try {
+      final baseline = (userData['baseline_cycle_length'] as num?)?.toDouble() ?? 28.0;
+      final lastStart = DateTime.parse(lastPeriodStart as String);
+      return lastStart.add(Duration(days: baseline.toInt()));
+    } catch (e) {
+      return null;
+    }
   }
 
   String _getPredictionText(int daysUntil, double confidence) {
@@ -263,6 +327,12 @@ class PredictionCard extends ConsumerWidget {
   }
 
   String _getMethodDescription(String method) {
-    return 'Based on your tracked cycles';
+    if (method == 'floating_window') {
+      return 'Based on recent cycles (adapts to changes)';
+    } else if (method == 'simple_average') {
+      return 'Based on your tracked cycles';
+    } else {
+      return 'Based on your reported cycle length';
+    }
   }
 }
