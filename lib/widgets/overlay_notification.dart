@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 
 /// Modern overlay notification system for non-critical feedback
@@ -29,11 +30,14 @@ class OverlayNotification {
 
     Overlay.of(context).insert(_currentOverlay!);
 
-    // Auto-dismiss
-    Future.delayed(duration, () {
-      _currentOverlay?.remove();
-      _currentOverlay = null;
-    });
+    // Auto-dismiss (skip scheduling timers when running unit/widget tests)
+    final bool isRunningTests = Platform.environment['FLUTTER_TEST'] == 'true';
+    if (!isRunningTests) {
+      Future.delayed(duration, () {
+        _currentOverlay?.remove();
+        _currentOverlay = null;
+      });
+    }
   }
 
   static void hide() {

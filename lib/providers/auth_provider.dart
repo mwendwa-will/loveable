@@ -1,20 +1,20 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:lovely/services/supabase_service.dart';
 
 /// Stream provider for real-time auth state changes
 /// Automatically rebuilds when user logs in, logs out, or token refreshes
-final authStateProvider = StreamProvider<AuthState>((ref) {
-  return Supabase.instance.client.auth.onAuthStateChange;
+final authStateProvider = StreamProvider<dynamic>((ref) {
+  return SupabaseService().client.auth.onAuthStateChange;
 });
 
 /// Current session provider - updates when auth state changes
-final currentSessionProvider = Provider<Session?>((ref) {
+final currentSessionProvider = Provider<dynamic>((ref) {
   final authState = ref.watch(authStateProvider);
   return authState.whenData((state) => state.session).value;
 });
 
 /// Current user provider - updates when auth state changes
-final currentUserProvider = Provider<User?>((ref) {
+final currentUserProvider = Provider<dynamic>((ref) {
   return ref.watch(currentSessionProvider)?.user;
 });
 

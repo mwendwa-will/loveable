@@ -7,7 +7,7 @@ import 'package:lovely/models/sexual_activity.dart';
 import 'package:lovely/models/note.dart';
 import 'package:lovely/providers/daily_log_provider.dart';
 import 'package:lovely/providers/period_provider.dart';
-import 'package:lovely/screens/daily_log_screen_v2.dart';
+import 'package:lovely/navigation/app_router.dart';
 
 /// Bottom sheet showing full day details when tapping a date
 class DayDetailBottomSheet extends ConsumerWidget {
@@ -82,11 +82,9 @@ class DayDetailBottomSheet extends ConsumerWidget {
                     if (!context.mounted) return;
                     Navigator.pop(context);
                     if (!context.mounted) return;
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => DailyLogScreenV2(selectedDate: dateKey),
-                      ),
+                    await Navigator.of(context).pushNamed(
+                      AppRoutes.dailyLog,
+                      arguments: {'selectedDate': dateKey},
                     );
                   },
                   child: const Text('Edit'),
@@ -186,7 +184,7 @@ class DayDetailBottomSheet extends ConsumerWidget {
         final lastPeriodStartStr = userData['last_period_start'];
         if (lastPeriodStartStr == null) {
           return Text(
-            'Start tracking your period to see cycle insights ✨',
+            'Start tracking your period to see cycle insights',
             style: TextStyle(
               fontSize: 14,
               color: colorScheme.onSurfaceVariant,

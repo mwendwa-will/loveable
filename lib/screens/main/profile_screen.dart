@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:lovely/services/supabase_service.dart';
+import 'package:lovely/services/profile_service.dart';
+import 'package:lovely/services/auth_service.dart';
 import 'package:lovely/services/pin_service.dart';
 import 'package:lovely/constants/app_colors.dart';
 import 'package:lovely/utils/responsive_utils.dart';
-import 'package:lovely/screens/settings/edit_profile_screen.dart';
-import 'package:lovely/screens/settings/change_password_screen.dart';
-import 'package:lovely/screens/settings/notifications_settings_screen.dart';
-import 'package:lovely/screens/settings/cycle_settings_screen.dart';
-import 'package:lovely/screens/security/pin_setup_screen.dart';
+import 'package:lovely/navigation/app_router.dart';
 import 'package:lovely/core/feedback/feedback_service.dart';
 import 'package:lovely/providers/pin_lock_provider.dart';
 
@@ -37,15 +34,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final service = SupabaseService();
-      final user = service.currentUser;
-      final userData = await service.getUserData();
+      final profileService = ProfileService();
+      final authService = AuthService();
+      final user = authService.currentUser;
+      final userData = await profileService.getUserData();
       
       if (mounted) {
         setState(() {
           _userName = userData?['first_name'] as String? ?? user?.userMetadata?['name'] as String? ?? 'User';
           _userEmail = user?.email ?? 'No email';
-          _isEmailVerified = service.isEmailVerified;
+          _isEmailVerified = authService.isEmailVerified;
           _profileCompletion = _calculateProfileCompletion(userData);
           _isLoading = false;
         });
@@ -93,7 +91,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     if (confirmed == true && context.mounted) {
       try {
-        await SupabaseService().signOut();
+        await AuthService().signOut();
         if (context.mounted) {
           Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
         }
@@ -221,15 +219,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   icon: FontAwesomeIcons.user,
                   iconColor: const Color(0xFFFF6F61),
                   title: 'Edit Profile',
-                  subtitle: _profileCompletion >= 1.0 ? 'Make it yours' : 'Complete your profile ✨',
+                  subtitle: _profileCompletion >= 1.0 ? 'Make it yours' : 'Complete your profile',
                   showBadge: _profileCompletion < 1.0,
                   onTap: () async {
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const EditProfileScreen(),
-                      ),
-                    );
+                    final result = await Navigator.of(context).pushNamed(AppRoutes.editProfile);
                     if (result == true && context.mounted) {
                       await _loadUserData();
                     }
@@ -240,7 +233,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   icon: FontAwesomeIcons.envelope,
                   iconColor: const Color(0xFFFF6F61),
                   title: 'Email Verification',
-                  subtitle: _isEmailVerified ? 'Verified ✓' : 'Almost there - verify to unlock features',
+                  subtitle: _isEmailVerified ? 'Verified' : 'Almost there - verify to unlock features',
                   showBadge: !_isEmailVerified,
                   onTap: () {
                     if (!_isEmailVerified) {
@@ -255,12 +248,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   title: 'Change Password',
                   subtitle: 'Keep your account secure',
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ChangePasswordScreen(),
-                      ),
-                    );
+                    Navigator.of(context).pushNamed(AppRoutes.changePassword);
                   },
                 ),
               ],
@@ -279,12 +267,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   title: 'Cycle Settings',
                   subtitle: 'Fine-tune your insights',
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const CycleSettingsScreen(),
-                      ),
-                    );
+                    Navigator.of(context).pushNamed(AppRoutes.cycleSettings);
                   },
                 ),
                 _buildListTile(
@@ -313,12 +296,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   title: 'Notifications',
                   subtitle: 'Stay in the loop, your way',
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const NotificationsSettingsScreen(),
-                      ),
-                    );
+                    Navigator.of(context).pushNamed(AppRoutes.notificationsSettings);
                   },
                 ),
                 _buildListTile(
@@ -372,7 +350,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   icon: FontAwesomeIcons.shield,
                   iconColor: const Color(0xFF9C27B0),
                   title: 'Privacy Policy',
-                  subtitle: 'Your data is private and secure 🔒',
+                  subtitle: 'Your data is private and secure',
                   onTap: () {
                     FeedbackService.showInfo(context, 'Privacy Policy: https://lovely.app/privacy');
                   },
@@ -596,7 +574,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             const SizedBox(height: 16),
             const Text(
-              'Almost there! Verifying your email unlocks password recovery and helps keep your wellness journey secure ✨',
+              'Almost there! Verifying your email unlocks password recovery and helps keep your wellness journey secure',
             ),
             const SizedBox(height: 24),
             SizedBox(
@@ -604,7 +582,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               child: FilledButton.icon(
                 onPressed: () async {
                   try {
-                    await SupabaseService().resendVerificationEmail();
+                    await AuthService().resendVerificationEmail();
                     if (context.mounted) {
                       Navigator.pop(context);
                       FeedbackService.showSuccess(
@@ -652,7 +630,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             const SizedBox(height: 16),
             Text(
               hasPin && isEnabled
-                  ? 'PIN protection is active. Your wellness data is secure 🔒'
+                  ? 'PIN protection is active. Your wellness data is secure'
                   : 'Set a 4-digit PIN to protect your sensitive health data from prying eyes',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
@@ -694,12 +672,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: FilledButton.icon(
                   onPressed: () async {
                     Navigator.pop(context);
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const PinSetupScreen(),
-                      ),
-                    );
+                    final result = await Navigator.of(context).pushNamed(AppRoutes.pinSetup);
                     if (result == true && mounted) {
                       ref.read(pinLockProvider.notifier).refresh();
                     }
@@ -934,10 +907,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('✓ Period & cycle tracking'),
-                  Text('✓ Mood & symptom logging'),
-                  Text('✓ Activity tracking'),
-                  Text('✓ Daily insights'),
+                  Text('Period & cycle tracking'),
+                Text('Mood & symptom logging'),
+                Text('Activity tracking'),
+                Text('Daily insights'),
                 ],
               ),
             ),
@@ -974,7 +947,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       );
 
       // Call delete account on backend
-      await SupabaseService().deleteAccount();
+      await AuthService().deleteAccount();
 
       // Close progress dialog
       if (!context.mounted) return;

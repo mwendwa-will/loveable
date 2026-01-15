@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lovely/constants/app_colors.dart';
-import 'package:lovely/services/supabase_service.dart';
+import 'package:lovely/services/health_service.dart';
+import 'package:lovely/services/period_service.dart';
 import 'package:lovely/services/cycle_analyzer.dart';
 import 'package:lovely/models/mood.dart';
 import 'package:lovely/models/symptom.dart';
@@ -29,7 +30,8 @@ class _CalendarView extends ConsumerStatefulWidget {
 }
 
 class _CalendarViewState extends ConsumerState<_CalendarView> with SingleTickerProviderStateMixin {
-  final _supabase = SupabaseService();
+  final _healthService = HealthService();
+  final _periodService = PeriodService();
   late PageController _pageController;
   final int _currentPageIndex = 6; // Start at middle month (6 months back + current)
   final int _totalMonths = 12; // Show 12 months total
@@ -719,7 +721,7 @@ class _CalendarViewState extends ConsumerState<_CalendarView> with SingleTickerP
   Future<CalendarData> _loadCalendarData(DateTime start, DateTime end) async {
     try {
       // Load periods
-      final periods = await _supabase.getPeriodsInRange(
+      final periods = await _periodService.getPeriodsInRange(
         startDate: start,
         endDate: end,
       );
@@ -730,7 +732,7 @@ class _CalendarViewState extends ConsumerState<_CalendarView> with SingleTickerP
         final periodStart = period.startDate;
         final periodEnd = period.endDate ?? DateTime.now();
 
-        debugPrint('📅 Period: ${period.id} from ${periodStart.toString()} to ${periodEnd.toString()}');
+        debugPrint('Period: ${period.id} from ${periodStart.toString()} to ${periodEnd.toString()}');
         
         for (int i = 0; i <= periodEnd.difference(periodStart).inDays; i++) {
           final day = _normalizeDate(
@@ -745,8 +747,8 @@ class _CalendarViewState extends ConsumerState<_CalendarView> with SingleTickerP
         }
       }
 
-      debugPrint('📊 Total period days loaded: ${periodDays.length}');
-      debugPrint('📊 Period days: ${periodDays.map((d) => DateFormat('MMM d').format(d)).join(', ')}');
+      debugPrint('Total period days loaded: ${periodDays.length}');
+      debugPrint('Period days: ${periodDays.map((d) => DateFormat('MMM d').format(d)).join(', ')}');
 
       // Get predictions from CycleAnalyzer (Phase 1 prediction engine)
       final predictions = await CycleAnalyzer.getCurrentPrediction();
@@ -754,7 +756,7 @@ class _CalendarViewState extends ConsumerState<_CalendarView> with SingleTickerP
       final fertileDays = predictions['fertileDays'] ?? <DateTime>{};
       final ovulationDays = predictions['ovulationDays'] ?? <DateTime>{};
 
-      debugPrint('📊 CycleAnalyzer predictions loaded:');
+      debugPrint('CycleAnalyzer predictions loaded:');
       debugPrint('   Predicted period days: ${predictedPeriodDays.length}');
       debugPrint('   Ovulation days: ${ovulationDays.length}');
       debugPrint('   Fertile days: ${fertileDays.length}');
@@ -767,10 +769,10 @@ class _CalendarViewState extends ConsumerState<_CalendarView> with SingleTickerP
 
       // Use Future.wait to fetch all data in parallel instead of sequential loop
       final results = await Future.wait([
-        _supabase.getMoodsInRange(startDate: start, endDate: end),
-        _supabase.getSymptomsInRange(startDate: start, endDate: end),
-        _supabase.getSexualActivitiesInRange(startDate: start, endDate: end),
-        _supabase.getNotesInRange(startDate: start, endDate: end),
+        _healthService.getMoodsInRange(startDate: start, endDate: end),
+        _healthService.getSymptomsInRange(startDate: start, endDate: end),
+        _healthService.getSexualActivitiesInRange(startDate: start, endDate: end),
+        _healthService.getNotesInRange(startDate: start, endDate: end),
       ]);
 
       // Process moods - index-based data structure
@@ -1170,7 +1172,7 @@ class _CalendarViewState extends ConsumerState<_CalendarView> with SingleTickerP
         }
       } else {
         // Start a new period on this date
-        await _supabase.startPeriod(startDate: dateKey);
+        await _periodService.startPeriod(startDate: dateKey);
         // Clear cache to refresh
         _calendarDataCache.clear();
         if (mounted) {
@@ -1348,10 +1350,10 @@ class _CalendarViewState extends ConsumerState<_CalendarView> with SingleTickerP
     try {
       if (currentMood?.moodType == moodType) {
         // Same mood tapped = delete
-        await _supabase.deleteMood(currentMood!.id);
+        await _healthService.deleteMood(currentMood!.id);
       } else {
         // Save new mood
-        await _supabase.saveMood(date: dateKey, mood: moodType);
+        await _healthService.saveMood(date: dateKey, mood: moodType);
       }
       // Clear cache and refresh
       _calendarDataCache.clear();
@@ -1376,7 +1378,7 @@ class _CalendarViewState extends ConsumerState<_CalendarView> with SingleTickerP
       if (hasSymptom) {
         // Remove symptom
         final symptom = currentSymptoms.firstWhere((s) => s.symptomType == symptomType);
-        await _supabase.deleteSymptom(symptom.id);
+        await _healthService.deleteSymptom(symptom.id);
       } else {
         // Add symptom with default severity
         final types = [...currentSymptoms.map((s) => s.symptomType), symptomType];
@@ -1385,7 +1387,7 @@ class _CalendarViewState extends ConsumerState<_CalendarView> with SingleTickerP
           severities[s.symptomType] = s.severity ?? 3;
         }
         severities[symptomType] = 3; // Default severity
-        await _supabase.saveSymptoms(
+        await _healthService.saveSymptoms(
           date: dateKey,
           symptomTypes: types,
           severities: severities,

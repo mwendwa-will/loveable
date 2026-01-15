@@ -159,7 +159,7 @@ class FeedbackService {
       return 'This email is already registered';
     }
     if (errorStr.contains('Email not confirmed')) {
-      return 'Let\'s verify your email first ✉️';
+      return 'Let\'s verify your email first';
     }
 
     // Database/Supabase errors - check specific errors first
@@ -176,7 +176,7 @@ class FeedbackService {
       return 'Database table not found - contact support if this continues';
     }
     if (errorStr.contains('column') && errorStr.contains('does not exist')) {
-      return 'App needs updating - check the app store 🔄';
+      return 'App needs updating - check the app store';
     }
     if (errorStr.contains('permission denied') || errorStr.contains('RLS')) {
       return 'Access denied - try logging in again?';

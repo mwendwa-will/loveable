@@ -1,0 +1,36 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/mockito.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:lovely/services/supabase_service.dart';
+
+// 1. Create a mock class for SupabaseClient
+class MockSupabaseClient extends Mock implements SupabaseClient {}
+
+class MockGoTrueClient extends Mock implements GoTrueClient {}
+
+void main() {
+  group('SupabaseService with mock', () {
+    late MockSupabaseClient mockClient;
+    late SupabaseService service;
+
+    setUp(() {
+      mockClient = MockSupabaseClient();
+      // You may need to update SupabaseService to accept a client for testing
+      service = SupabaseService.forTest(mockClient);
+    });
+
+    test('calls getUser on the mock client', () async {
+      // Arrange: set up mock behavior
+      final mockAuth = MockGoTrueClient();
+      when(() => mockClient.auth).thenReturn(mockAuth);
+      when(() => mockAuth.currentUser).thenReturn(null);
+
+      // Act
+      final user = service.currentUser;
+
+      // Assert
+      expect(user, isNull);
+      verify(() => mockAuth.currentUser).called(1);
+    });
+  });
+}

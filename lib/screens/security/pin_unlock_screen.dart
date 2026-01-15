@@ -80,7 +80,7 @@ class _PinUnlockScreenState extends State<PinUnlockScreen> {
     if (isCorrect) {
       HapticFeedback.mediumImpact();
       if (mounted) {
-        debugPrint('✅ PIN verified successfully');
+        debugPrint('PIN verified successfully');
         // Call callback if provided (from main.dart)
         // This will handle unlocking and navigation
         widget.onUnlocked?.call();

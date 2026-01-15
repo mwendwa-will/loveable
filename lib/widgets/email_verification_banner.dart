@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:lovely/services/supabase_service.dart';
+import 'package:lovely/services/auth_service.dart';
 import 'package:lovely/core/feedback/feedback_service.dart';
 
 class EmailVerificationBanner extends StatefulWidget {
@@ -19,12 +19,12 @@ class _EmailVerificationBannerState extends State<EmailVerificationBanner> {
     setState(() => _isResending = true);
 
     try {
-      await SupabaseService().resendVerificationEmail();
+      await AuthService().resendVerificationEmail();
 
       if (mounted) {
         FeedbackService.showSuccess(
           context,
-          'Email sent! Check your inbox ✉️',
+          'Email sent! Check your inbox',
         );
       }
     } catch (e) {
@@ -47,7 +47,7 @@ class _EmailVerificationBannerState extends State<EmailVerificationBanner> {
     // Don't show if dismissed temporarily
     if (_isDismissed) return const SizedBox.shrink();
 
-    final daysSinceSignup = SupabaseService().daysSinceSignup;
+    final daysSinceSignup = AuthService().daysSinceSignup;
     final isUrgent = daysSinceSignup > 5; // Show urgency after 5 days
 
     return Container(
@@ -78,7 +78,7 @@ class _EmailVerificationBannerState extends State<EmailVerificationBanner> {
               Expanded(
                 child: Text(
                   isUrgent
-                      ? 'Time to verify your email ⏰'
+                      ? 'Time to verify your email'
                       : 'Let\'s verify your email',
 
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(

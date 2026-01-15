@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lovely/services/supabase_service.dart';
+import 'package:lovely/services/profile_service.dart';
 import 'package:intl/intl.dart';
 import 'package:lovely/core/feedback/feedback_service.dart';
 
@@ -11,7 +11,7 @@ class PregnancyModeScreen extends StatefulWidget {
 }
 
 class _PregnancyModeScreenState extends State<PregnancyModeScreen> {
-  final _supabase = SupabaseService();
+  final _profileService = ProfileService();
   bool _isLoading = true;
   bool _pregnancyModeEnabled = false;
   DateTime? _conceptionDate;
@@ -26,8 +26,8 @@ class _PregnancyModeScreenState extends State<PregnancyModeScreen> {
   Future<void> _loadPregnancyInfo() async {
     setState(() => _isLoading = true);
     try {
-      final userData = await _supabase.getUserData();
-      final pregnancyInfo = await _supabase.getPregnancyInfo();
+      final userData = await _profileService.getUserData();
+      final pregnancyInfo = await _profileService.getPregnancyInfo();
 
       setState(() {
         _pregnancyModeEnabled = userData?['pregnancy_mode'] == true;
@@ -57,7 +57,7 @@ class _PregnancyModeScreenState extends State<PregnancyModeScreen> {
     final dueDate = conceptionDate.add(const Duration(days: 280));
 
     try {
-      await _supabase.enablePregnancyMode(
+      await _profileService.enablePregnancyMode(
         conceptionDate: conceptionDate,
         dueDate: dueDate,
       );
@@ -65,7 +65,7 @@ class _PregnancyModeScreenState extends State<PregnancyModeScreen> {
       if (mounted) {
         FeedbackService.showSuccess(
           context,
-          'Pregnancy mode enabled! 🎉',
+          'Pregnancy mode enabled!',
         );
       }
 
@@ -101,7 +101,7 @@ class _PregnancyModeScreenState extends State<PregnancyModeScreen> {
     if (confirmed != true) return;
 
     try {
-      await _supabase.disablePregnancyMode();
+      await _profileService.disablePregnancyMode();
 
       if (mounted) {
         FeedbackService.showSuccess(

@@ -5,6 +5,7 @@ import 'package:lovely/screens/main/home_screen.dart';
 import 'package:lovely/screens/onboarding/onboarding_screen.dart';
 import 'package:lovely/screens/auth/welcome_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:lovely/services/supabase_service.dart';
 
 /// AuthGate: Authentication Gateway
 ///
@@ -41,7 +42,7 @@ class AuthGate extends ConsumerWidget {
 
       // Error state - show error message
       error: (error, stackTrace) {
-        debugPrint('❌ Auth error: $error');
+        debugPrint('Auth error: $error');
         return Scaffold(
           body: Center(
             child: Padding(
@@ -119,7 +120,7 @@ class _OnboardingGate extends StatelessWidget {
 
         // Handle errors gracefully - fallback to home screen
         if (snapshot.hasError) {
-          debugPrint('⚠️ Error checking onboarding: ${snapshot.error}');
+          debugPrint('Warning: Error checking onboarding: ${snapshot.error}');
           return const HomeScreen();
         }
 
@@ -142,8 +143,18 @@ class _OnboardingGate extends StatelessWidget {
           .single();
       return response['onboarding_completed'] == true;
     } catch (e) {
-      debugPrint('Error checking onboarding: $e');
-      return false;
+      // If the `onboarding_completed` column does not exist (older schema),
+      // fall back to the service-level check which treats presence of a
+      // users row as completion. This keeps older DBs compatible.
+      debugPrint('Error checking onboarding via column: $e');
+      try {
+        final fallback = await SupabaseService().hasCompletedOnboarding();
+        debugPrint('Fallback onboarding check result: $fallback');
+        return fallback;
+      } catch (e2) {
+        debugPrint('Fallback onboarding check failed: $e2');
+        return false;
+      }
     }
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:lovely/services/supabase_service.dart';
+import 'package:lovely/services/auth_service.dart';
 import 'package:lovely/constants/app_colors.dart';
 import 'package:lovely/utils/responsive_utils.dart';
 import 'package:lovely/core/feedback/feedback_service.dart';
@@ -37,7 +37,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     setState(() => _isSaving = true);
 
     try {
-      final service = SupabaseService();
+      final service = AuthService();
       
       // Verify current password by attempting to sign in
       final user = service.currentUser;
@@ -61,7 +61,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       if (mounted) {
         FeedbackService.showSuccess(
           context,
-          'Password updated successfully! ✨',
+          'Password updated successfully!',
         );
         Navigator.pop(context);
       }

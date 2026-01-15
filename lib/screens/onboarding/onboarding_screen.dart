@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
-import 'package:lovely/services/supabase_service.dart';
+import 'package:lovely/services/auth_service.dart';
+import 'package:lovely/services/profile_service.dart';
+import 'package:lovely/services/period_service.dart';
 import 'package:lovely/services/cycle_analyzer.dart';
-import 'package:lovely/screens/main/home_screen.dart';
+import 'package:lovely/navigation/app_router.dart';
 import 'package:lovely/models/period.dart';
 import 'package:lovely/core/feedback/feedback_service.dart';
 import 'package:lovely/core/exceptions/app_exceptions.dart';
@@ -42,37 +44,37 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _loadUserData() async {
     try {
-      final supabaseService = SupabaseService();
-      
-      debugPrint('🔍 Loading user data...');
-      
+      final authService = AuthService();
+
+      debugPrint('Loading user data...');
+
       // Wait a bit for auth state to settle
       await Future.delayed(const Duration(milliseconds: 100));
 
-      var user = supabaseService.currentUser;
+      var user = authService.currentUser;
       
       if (user != null) {
-        debugPrint('✅ User loaded: ${user.email}');
-        debugPrint('🔑 Session: ${supabaseService.currentSession != null ? 'Valid' : 'None'}');
+        debugPrint('User loaded: ${user.email}');
+        debugPrint('Session: ${authService.currentSession != null ? 'Valid' : 'None'}');
         setState(() {
           _isLoading = false;
         });
       } else {
         // If still no user, retry once with session refresh
-        debugPrint('⚠️ No user found, retrying with session refresh...');
+        debugPrint('No user found, retrying with session refresh...');
         await Future.delayed(const Duration(milliseconds: 500));
         
         try {
-          await supabaseService.client.auth.refreshSession();
+          await authService.refreshSession();
         } catch (e) {
-          debugPrint('⚠️ Session refresh failed: $e');
+          debugPrint('Warning: Session refresh failed: $e');
         }
         
-        user = supabaseService.currentUser;
+        user = authService.currentUser;
         if (user != null) {
-          debugPrint('✅ User loaded after refresh: ${user.email}');
+          debugPrint('User loaded after refresh: ${user.email}');
         } else {
-          debugPrint('❌ Still no user after refresh');
+          debugPrint('Still no user after refresh');
         }
         
         setState(() {
@@ -80,7 +82,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         });
       }
     } catch (e) {
-      debugPrint('❌ Error loading user data: $e');
+      debugPrint('Error loading user data: $e');
       setState(() => _isLoading = false);
       if (mounted) {
         FeedbackService.showError(context, e);
@@ -113,15 +115,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       
       case 1: // Cycle info page - validate cycle lengths
         if (_averageCycleLength < 21 || _averageCycleLength > 35) {
-          errorMessage = 'Let\'s keep cycle length between 21-35 days 📅';
+          errorMessage = 'Please keep cycle length between 21 and 35 days.';
         } else if (_averagePeriodLength < 2 || _averagePeriodLength > 10) {
-          errorMessage = 'Period length works best between 2-10 days ✨';
+          errorMessage = 'Period length works best between 2 and 10 days.';
         }
         break;
       
       case 2: // Last period page - require date
         if (_lastPeriodStart == null) {
-          errorMessage = 'We need your last period date to get started 📅';
+          errorMessage = 'Please provide your last period date to get started.';
         }
         break;
       
@@ -149,49 +151,50 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Future<void> _finishOnboarding() async {
     try {
       setState(() => _isLoading = true);
-      
-      final supabaseService = SupabaseService();
-      
+      final authService = AuthService();
+      final profileService = ProfileService();
+      final periodService = PeriodService();
+
       // Get current user with retry logic
-      var user = supabaseService.currentUser;
+      var user = authService.currentUser;
       
       // If no user, try refreshing session
       if (user == null) {
-        debugPrint('⚠️ No current user, attempting session refresh...');
+          debugPrint('No current user, attempting session refresh...');
         try {
-          await supabaseService.client.auth.refreshSession();
-          user = supabaseService.currentUser;
-          debugPrint('✅ Session refreshed, user: ${user?.email}');
+          await authService.refreshSession();
+          user = authService.currentUser;
+          debugPrint('Session refreshed, user: ${user?.email}');
         } catch (e) {
-          debugPrint('❌ Session refresh failed: $e');
+          debugPrint('Session refresh failed: $e');
         }
       }
       
       // If still no user, fail
       if (user == null) {
-        debugPrint('❌ No authenticated user found after refresh');
+        debugPrint('No authenticated user found after refresh');
         throw AuthException.sessionExpired();
       }
 
-      debugPrint('✅ User found: ${user.email}');
+      debugPrint('User found: ${user.email}');
 
       // Get username and names from metadata
       var username = user.userMetadata?['username'] as String?;
       var firstName = user.userMetadata?['first_name'] as String?;
       var lastName = user.userMetadata?['last_name'] as String?;
       
-      debugPrint('🔍 Username from metadata: $username');
-      debugPrint('🔍 First name from metadata: $firstName');
-      debugPrint('🔍 Last name from metadata: $lastName');
+      debugPrint('Username from metadata: $username');
+      debugPrint('First name from metadata: $firstName');
+      debugPrint('Last name from metadata: $lastName');
       
       // If username not in metadata, try to get it from the database
       if (username == null || username.isEmpty) {
-        debugPrint('⚠️ Username not in metadata, querying database...');
-        final userData = await supabaseService.getUserData();
+        debugPrint('Username not in metadata, querying database...');
+        final userData = await profileService.getUserData();
         username = userData?['username'] as String?;
         firstName ??= userData?['first_name'] as String?;
         lastName ??= userData?['last_name'] as String?;
-        debugPrint('🔍 Username from database: $username');
+        debugPrint('Username from database: $username');
       }
       
       // Username is required
@@ -199,10 +202,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         throw AuthException('Username not found. Please sign up again.', code: 'AUTH_009');
       }
 
-      debugPrint('💾 Saving onboarding data for user: $username');
+      debugPrint('Saving onboarding data for user: $username');
       
       // Save user data to Supabase
-      await supabaseService.saveUserData(
+      await profileService.saveUserData(
         username: username,
         firstName: firstName,
         lastName: lastName,
@@ -213,49 +216,49 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         notificationsEnabled: _notificationsEnabled,
       );
 
-      debugPrint('✅ Onboarding data saved successfully');
+      debugPrint('Onboarding data saved successfully');
 
-      // ✨ If last period start is recent (within average period length), create an active period record
+      // If last period start is recent (within average period length), create an active period record
       if (_lastPeriodStart != null) {
         final daysSinceStart = DateTime.now().difference(_lastPeriodStart!).inDays;
         // Use user's average period length instead of hardcoded 7 days
         if (daysSinceStart <= _averagePeriodLength) {
-          try {
-            debugPrint('📅 Last period is recent ($daysSinceStart days ago, threshold: $_averagePeriodLength days), creating active period record...');
+            try {
+            debugPrint('Last period is recent ($daysSinceStart days ago, threshold: $_averagePeriodLength days), creating active period record...');
             // Start with light intensity by default, user can update in DailyLogScreen
-            await supabaseService.startPeriod(
+            await periodService.startPeriod(
               startDate: _lastPeriodStart!,
               intensity: FlowIntensity.light,
             );
-            debugPrint('✅ Active period record created');
+            debugPrint('Active period record created');
           } catch (e) {
-            debugPrint('⚠️ Error creating period record: $e');
+            debugPrint('Warning: Error creating period record: $e');
             // Don't block navigation if this fails
           }
         }
       }
 
-      // ✨ Generate initial predictions (Instance 3: First Forecast)
+      // Generate initial predictions (Instance 3: First Forecast)
       try {
-        final userId = supabaseService.currentUser?.id;
+        final userId = authService.currentUser?.id;
         if (userId != null) {
           await CycleAnalyzer.generateInitialPredictions(userId);
-          debugPrint('✅ Initial predictions generated');
+          debugPrint('Initial predictions generated');
         }
       } catch (e) {
-        debugPrint('⚠️ Error generating predictions: $e');
+        debugPrint('Warning: Error generating predictions: $e');
         // Don't block navigation if prediction fails
       }
 
       if (mounted) {
         // Navigate to home screen
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          AppRoutes.home,
           (route) => false,
         );
       }
     } catch (e) {
-      debugPrint('❌ Onboarding error: $e');
+      debugPrint('Onboarding error: $e');
       if (mounted) {
         setState(() => _isLoading = false);
         FeedbackService.showError(context, e);
@@ -338,7 +341,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                       child: Text(
                         _currentPage == _totalPages - 1
-                            ? 'Let\'s Go! 🎉'
+                            ? 'Let\'s Go!'
                             : 'Next',
                         style: const TextStyle(
                           fontSize: 16,
@@ -389,7 +392,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(height: 32),
 
           Text(
-            'Welcome to Lovely! ✨',
+            'Welcome to Lovely!',
             style: Theme.of(
               context,
             ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
@@ -673,7 +676,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'This helps us predict your cycle and give you personalized insights ✨',
+                    'This helps us predict your cycle and give you personalized insights',
                     style: TextStyle(color: Colors.blue[900], fontSize: 14),
                   ),
                 ),

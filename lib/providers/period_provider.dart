@@ -1,17 +1,38 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lovely/models/period.dart';
 import 'package:lovely/services/supabase_service.dart';
+import 'package:lovely/services/period_service.dart';
+import 'package:lovely/services/profile_service.dart';
+import 'package:lovely/services/health_service.dart';
+import 'package:lovely/services/auth_service.dart';
 
-// Provider for SupabaseService
+// Provider for SupabaseService (deprecated - prefer domain services)
 final supabaseServiceProvider = Provider<SupabaseService>((ref) {
   return SupabaseService();
+});
+
+// Domain service providers
+final authServiceProvider = Provider<AuthService>((ref) {
+  return AuthService();
+});
+
+final periodServiceProvider = Provider<PeriodService>((ref) {
+  return PeriodService();
+});
+
+final profileServiceProvider = Provider<ProfileService>((ref) {
+  return ProfileService();
+});
+
+final healthServiceProvider = Provider<HealthService>((ref) {
+  return HealthService();
 });
 
 // Stream provider for periods in a date range - with auto disposal and caching
 final periodsStreamProvider = StreamProvider.autoDispose
     .family<List<Period>, DateRange>((ref, dateRange) {
-      final supabase = ref.watch(supabaseServiceProvider);
-      return supabase.getPeriodsStream(
+      final periodService = ref.watch(periodServiceProvider);
+      return periodService.getPeriodsStream(
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
       );
@@ -19,8 +40,8 @@ final periodsStreamProvider = StreamProvider.autoDispose
 
 // FutureProvider for user data (cached, non-auto-disposing)
 final userDataProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
-  final supabase = ref.watch(supabaseServiceProvider);
-  return await supabase.getUserData();
+  final profile = ref.watch(profileServiceProvider);
+  return await profile.getUserData();
 });
 
 // Helper class for date range

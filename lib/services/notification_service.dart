@@ -15,7 +15,7 @@ class NotificationService {
 
   /// Initialize awesome_notifications and FCM with app icon and channel
   Future<void> initialize() async {
-    debugPrint('🔔 Initializing Awesome Notifications & FCM...');
+    debugPrint('Initializing Awesome Notifications & FCM...');
     
     // Initialize Awesome Notifications
     await _initializeAwesomeNotifications();
@@ -23,7 +23,7 @@ class NotificationService {
     // Initialize Firebase Messaging
     await _initializeFirebaseMessaging();
     
-    debugPrint('✅ Notifications system initialized successfully');
+    debugPrint('Notifications system initialized successfully');
   }
 
   /// Initialize Awesome Notifications
@@ -58,9 +58,9 @@ class NotificationService {
         await AwesomeNotifications().requestPermissionToSendNotifications();
       }
 
-      debugPrint('✅ Awesome Notifications initialized');
+      debugPrint('Awesome Notifications initialized');
     } catch (e) {
-      debugPrint('❌ Error initializing Awesome Notifications: $e');
+      debugPrint('Error initializing Awesome Notifications: $e');
     }
   }
 
@@ -81,36 +81,36 @@ class NotificationService {
       );
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-        debugPrint('✅ FCM permission granted');
+        debugPrint('FCM permission granted');
       } else if (settings.authorizationStatus ==
           AuthorizationStatus.provisional) {
-        debugPrint('⚠️ FCM permission granted (provisional)');
+        debugPrint('FCM permission granted (provisional)');
       } else {
-        debugPrint('❌ FCM permission denied');
+        debugPrint('FCM permission denied');
       }
 
       // Get and store FCM token
       String? token = await _firebaseMessaging.getToken();
       if (token != null) {
-        debugPrint('📱 FCM Token obtained: ${token.substring(0, 20)}...');
+        debugPrint('FCM Token obtained: ${token.substring(0, 20)}...');
         // Store token in Supabase (handled by supabase_service)
       }
 
       // Listen for token refresh
       _firebaseMessaging.onTokenRefresh.listen((newToken) {
-        debugPrint('🔄 FCM token refreshed: ${newToken.substring(0, 20)}...');
+        debugPrint('FCM token refreshed: ${newToken.substring(0, 20)}...');
         // Update token in Supabase when it changes
       });
 
       // Handle foreground messages
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        debugPrint('📬 FCM foreground message received');
+        debugPrint('FCM foreground message received');
         _handleFCMMessage(message);
       });
 
       // Handle background messages
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-        debugPrint('📬 FCM background message opened');
+        debugPrint('FCM background message opened');
         _handleFCMMessage(message);
       });
 
@@ -118,9 +118,9 @@ class NotificationService {
       FirebaseMessaging.onBackgroundMessage(
           firebaseMessagingBackgroundHandler);
 
-      debugPrint('✅ Firebase Messaging initialized');
+      debugPrint('Firebase Messaging initialized');
     } catch (e) {
-      debugPrint('❌ Error initializing Firebase Messaging: $e');
+      debugPrint('Error initializing Firebase Messaging: $e');
     }
   }
 
@@ -129,7 +129,7 @@ class NotificationService {
     try {
       return await _firebaseMessaging.getToken();
     } catch (e) {
-      debugPrint('❌ Error getting FCM token: $e');
+      debugPrint('Error getting FCM token: $e');
       return null;
     }
   }
@@ -150,9 +150,9 @@ class NotificationService {
           largeIcon: 'asset://assets/icons/period_icon.png',
         ),
       );
-      debugPrint('📬 Period reminder sent: $title');
+      debugPrint('Period reminder sent: $title');
     } catch (e) {
-      debugPrint('❌ Error sending period reminder: $e');
+      debugPrint('Error sending period reminder: $e');
     }
   }
 
@@ -169,9 +169,9 @@ class NotificationService {
           largeIcon: 'asset://assets/icons/mood_icon.png',
         ),
       );
-      debugPrint('📬 Mood check-in reminder sent');
+      debugPrint('Mood check-in reminder sent');
     } catch (e) {
-      debugPrint('❌ Error sending mood check-in reminder: $e');
+      debugPrint('Error sending mood check-in reminder: $e');
     }
   }
 
@@ -190,9 +190,9 @@ class NotificationService {
           largeIcon: 'asset://assets/icons/affirmation_icon.png',
         ),
       );
-      debugPrint('📬 Affirmation notification sent');
+      debugPrint('Affirmation notification sent');
     } catch (e) {
-      debugPrint('❌ Error sending affirmation: $e');
+      debugPrint('Error sending affirmation: $e');
     }
   }
 
@@ -211,9 +211,9 @@ class NotificationService {
           largeIcon: 'asset://assets/icons/task_icon.png',
         ),
       );
-      debugPrint('📬 Task reminder sent: $taskTitle');
+      debugPrint('Task reminder sent: $taskTitle');
     } catch (e) {
-      debugPrint('❌ Error sending task reminder: $e');
+      debugPrint('Error sending task reminder: $e');
     }
   }
 
@@ -245,9 +245,9 @@ class NotificationService {
           repeats: false,
         ),
       );
-      debugPrint('📅 Notification scheduled for $scheduledTime');
+      debugPrint('Notification scheduled for $scheduledTime');
     } catch (e) {
-      debugPrint('❌ Error scheduling notification: $e');
+      debugPrint('Error scheduling notification: $e');
     }
   }
 
@@ -277,9 +277,9 @@ class NotificationService {
           repeats: true, // Repeat daily
         ),
       );
-      debugPrint('📅 Recurring notification scheduled for $hour:$minute daily');
+      debugPrint('Recurring notification scheduled for $hour:$minute daily');
     } catch (e) {
-      debugPrint('❌ Error scheduling recurring notification: $e');
+      debugPrint('Error scheduling recurring notification: $e');
     }
   }
 
@@ -287,9 +287,9 @@ class NotificationService {
   Future<void> cancelAllNotifications() async {
     try {
       await AwesomeNotifications().cancelAll();
-      debugPrint('✅ All notifications cancelled');
+      debugPrint('All notifications cancelled');
     } catch (e) {
-      debugPrint('❌ Error cancelling notifications: $e');
+      debugPrint('Error cancelling notifications: $e');
     }
   }
 
@@ -297,9 +297,9 @@ class NotificationService {
   Future<void> cancelNotification(int id) async {
     try {
       await AwesomeNotifications().cancel(id);
-      debugPrint('✅ Notification $id cancelled');
+      debugPrint('Notification $id cancelled');
     } catch (e) {
-      debugPrint('❌ Error cancelling notification $id: $e');
+      debugPrint('Error cancelling notification $id: $e');
     }
   }
 
@@ -315,7 +315,7 @@ class NotificationService {
 
   /// Handle FCM messages (both foreground and background)
   void _handleFCMMessage(RemoteMessage message) {
-    debugPrint('📨 Processing FCM message: ${message.notification?.title}');
+    debugPrint('Processing FCM message: ${message.notification?.title}');
 
     // Show awesome notification for FCM message
     AwesomeNotifications().createNotification(
@@ -333,5 +333,5 @@ class NotificationService {
 /// Top-level function for Firebase background message handling
 /// (Must be top-level or static for background isolate)
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  debugPrint('📨 Background message: ${message.notification?.title}');
+  debugPrint('Background message: ${message.notification?.title}');
 }

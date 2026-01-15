@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:lovely/constants/app_colors.dart';
-import 'package:lovely/screens/auth/login.dart';
-import 'package:lovely/screens/auth/signup.dart';
+import 'package:lovely/navigation/app_router.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -61,7 +60,7 @@ class WelcomeScreen extends StatelessWidget {
 
                   // Subtitle
                   Text(
-                    'Your wellness journey starts here ✨',
+                    'Your wellness journey starts here',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: isDark ? Colors.white70 : AppColors.textMediumGray,
                       height: 1.5,
@@ -111,11 +110,7 @@ class WelcomeScreen extends StatelessWidget {
                   height: 56,
                   child: FilledButton(
                     onPressed: () {
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(
-                          builder: (context) => const SignUpScreen(),
-                        ),
-                      );
+                      Navigator.of(context).pushReplacementNamed(AppRoutes.signup);
                     },
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -143,11 +138,7 @@ class WelcomeScreen extends StatelessWidget {
                 hint: 'Sign in to your existing account',
                 child: TextButton(
                   onPressed: () {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                        builder: (context) => const LoginScreen(),
-                      ),
-                    );
+                    Navigator.of(context).pushReplacementNamed(AppRoutes.login);
                   },
                   child: Text(
                     'Already have an account? Sign In',

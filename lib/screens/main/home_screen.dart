@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lovely/providers/period_provider.dart';
 import 'package:lovely/providers/daily_log_provider.dart';
-import 'package:lovely/screens/main/profile_screen.dart';
-import 'package:lovely/screens/daily_log_screen_v2.dart';
-import 'package:lovely/screens/calendar_screen.dart';
+import 'package:lovely/navigation/app_router.dart';
 import 'package:lovely/widgets/email_verification_banner.dart';
 import 'package:lovely/widgets/day_detail_bottom_sheet.dart';
 import 'package:lovely/models/period.dart';
@@ -14,9 +12,15 @@ import 'package:lovely/models/sexual_activity.dart';
 import 'package:lovely/constants/app_colors.dart';
 import 'package:lovely/utils/responsive_utils.dart';
 import 'package:lovely/services/cycle_analyzer.dart';
+import 'package:lovely/services/auth_service.dart';
+import 'package:lovely/services/profile_service.dart';
+import 'package:lovely/services/period_service.dart';
+import 'dart:async';
+
 import 'package:intl/intl.dart';
 import 'package:lovely/widgets/cycle_insights.dart';
 import 'package:lovely/widgets/prediction_card.dart';
+import 'package:lovely/widgets/app_dialog.dart';
 import 'package:lovely/core/feedback/feedback_service.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -30,6 +34,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _showVerificationRequired = false;
   Period? _currentPeriod;
   bool _isLoading = true;
+  StreamSubscription<void>? _periodChangesSub;
 
   DateTime? _lastPeriodStart;
   int _averageCycleLength = 28;
@@ -45,16 +50,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _weekPageController = PageController(initialPage: 100); // Start in middle for infinite scroll
     _checkVerificationStatus();
     _loadData();
+    // Subscribe to period changes so home refreshes when user logs a period
+    _periodChangesSub = PeriodService().periodChanges.listen((_) {
+      if (mounted) _loadData();
+    });
   }
 
   @override
   void dispose() {
+    _periodChangesSub?.cancel();
     _weekPageController.dispose();
     super.dispose();
   }
 
   void _checkVerificationStatus() {
-    if (ref.read(supabaseServiceProvider).requiresVerification) {
+    if (AuthService().requiresVerification) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           setState(() => _showVerificationRequired = true);
@@ -68,9 +78,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final supabase = ref.read(supabaseServiceProvider);
-      final userData = await supabase.getUserData();
-      final currentPeriod = await supabase.getCurrentPeriod();
+      final profileService = ProfileService();
+      final periodService = PeriodService();
+      final userData = await profileService.getUserData();
+      final currentPeriod = await periodService.getCurrentPeriod();
 
       if (mounted) {
         setState(() {
@@ -87,8 +98,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         });
       }
     } catch (e, stackTrace) {
-      debugPrint('❌ Error in _loadData: $e');
-      debugPrint('📍 Stack trace: $stackTrace');
+      debugPrint('Error in _loadData: $e');
+      debugPrint('Stack trace: $stackTrace');
       if (mounted) {
         setState(() => _isLoading = false);
         FeedbackService.showError(context, e);
@@ -107,7 +118,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           children: [
             Icon(Icons.warning_amber_rounded, color: colorScheme.tertiary),
             const SizedBox(width: 12),
-            const Expanded(child: Text('Let\'s verify your email ✨')),
+            const Expanded(child: Text('Let\'s verify your email')),
           ],
         ),
         content: const Text(
@@ -121,13 +132,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           FilledButton.icon(
             onPressed: () async {
               try {
-                final supabase = ref.read(supabaseServiceProvider);
-                await supabase.resendVerificationEmail();
+                await AuthService().resendVerificationEmail();
                 if (context.mounted) {
                   Navigator.of(context).pop();
                   FeedbackService.showSuccess(
                     context,
-                    'Check your inbox! Verification email is on its way ✉️',
+                    'Check your inbox! Verification email is on its way',
                   );
                 }
               } catch (e) {
@@ -445,11 +455,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   onTap: () async {
                     Navigator.pop(ctx);
                     if (!mounted) return;
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => DailyLogScreenV2(selectedDate: date),
-                      ),
+                    await Navigator.of(context).pushNamed(
+                      AppRoutes.dailyLog,
+                      arguments: {'selectedDate': date},
                     );
                   },
                 ),
@@ -461,11 +469,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   onTap: () async {
                     Navigator.pop(ctx);
                     if (!mounted) return;
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => DailyLogScreenV2(selectedDate: date),
-                      ),
+                    await Navigator.of(context).pushNamed(
+                      AppRoutes.dailyLog,
+                      arguments: {'selectedDate': date},
                     );
                   },
                 ),
@@ -477,11 +483,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   onTap: () async {
                     Navigator.pop(ctx);
                     if (!mounted) return;
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => DailyLogScreenV2(selectedDate: date),
-                      ),
+                    await Navigator.of(context).pushNamed(
+                      AppRoutes.dailyLog,
+                      arguments: {'selectedDate': date},
                     );
                   },
                 ),
@@ -704,7 +708,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Your Cycle ✨',
+                'Your Cycle',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -1030,14 +1034,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final todayKey = DateTime(today.year, today.month, today.day);
     
     try {
-      final supabase = ref.read(supabaseServiceProvider);
-      
+      final health = ref.read(healthServiceProvider);
+
       if (currentMood?.moodType == moodType) {
         // Tapped same mood = delete
-        await supabase.deleteMood(currentMood!.id);
+        await health.deleteMood(currentMood!.id);
       } else {
         // Tapped different mood = save new
-        await supabase.saveMood(date: todayKey, mood: moodType);
+        await health.saveMood(date: todayKey, mood: moodType);
       }
       ref.invalidate(moodStreamProvider(todayKey));
     } catch (e) {
@@ -1343,7 +1347,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     required DateTime todayKey,
   }) async {
     try {
-      final supabase = ref.read(supabaseServiceProvider);
+      final health = ref.read(healthServiceProvider);
       final currentTypes = allSymptoms.map((s) => s.symptomType).toList();
       final severities = <SymptomType, int>{};
       
@@ -1358,14 +1362,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (existingSymptom == null) {
         // Adding new symptom
         severities[symptomType] = severity;
-        await supabase.saveSymptoms(
+        await health.saveSymptoms(
           date: todayKey,
           symptomTypes: [...currentTypes, symptomType],
           severities: severities,
         );
       } else {
         // Updating existing symptom
-        await supabase.saveSymptoms(
+        await health.saveSymptoms(
           date: todayKey,
           symptomTypes: currentTypes,
           severities: severities,
@@ -1382,8 +1386,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Future<void> _removeSymptom(Symptom symptom, DateTime todayKey) async {
     try {
-      final supabase = ref.read(supabaseServiceProvider);
-      await supabase.deleteSymptom(symptom.id);
+      final health = ref.read(healthServiceProvider);
+      await health.deleteSymptom(symptom.id);
       ref.invalidate(symptomsStreamProvider(todayKey));
     } catch (e) {
       if (mounted) {
@@ -1423,7 +1427,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Wellness Tip 💡',
+                  'Wellness Tip',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -1449,8 +1453,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final supabase = ref.read(supabaseServiceProvider);
-    final isEmailVerified = supabase.isEmailVerified;
+    final isEmailVerified = AuthService().isEmailVerified;
     final greeting = _getGreeting();
     final cycleStatus = _getCycleStatus();
 
@@ -1484,10 +1487,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           padding: const EdgeInsets.all(8),
           child: InkWell(
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ProfileScreen()),
-              );
+              Navigator.of(context).pushNamed(AppRoutes.profile);
             },
             borderRadius: BorderRadius.circular(20),
             child: CircleAvatar(
@@ -1513,10 +1513,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.calendar_month),
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const CalendarScreen()),
-              );
+              Navigator.of(context).pushNamed(AppRoutes.calendar);
             },
             tooltip: 'Calendar',
           ),
@@ -1536,8 +1533,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: Column(
                 children: [
                   _buildWeekStrip(),
-                  const PredictionCard(), // ✨ Show prediction with confidence
-                  const CycleInsights(), // ✨ Show cycle shift insights
+                  const PredictionCard(), // Show prediction with confidence
+                  const CycleInsights(), // Show cycle shift insights
                   _buildCycleCard(),
                   _buildMoodSection(),
                   _buildSymptomsSection(),
@@ -1580,11 +1577,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       onPressed: () {
         final today = DateTime.now();
         final todayKey = DateTime(today.year, today.month, today.day);
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => DailyLogScreenV2(selectedDate: todayKey),
-          ),
+        Navigator.of(context).pushNamed(
+          AppRoutes.dailyLog,
+          arguments: {'selectedDate': todayKey},
         );
       },
       icon: const Icon(Icons.edit_note),
@@ -1597,10 +1592,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   // Show cycle phase information
   void _showCyclePhaseInfo(BuildContext context, int? currentCycleDay) {
     if (currentCycleDay == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Track your first period to unlock personalized cycle insights ✨'),
-        ),
+      AppDialog.showInfo(
+        context,
+        title: 'Track your cycle',
+        message: 'Track your first period to unlock personalized cycle insights',
       );
       return;
     }
@@ -1628,135 +1623,108 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       phaseColor = AppColors.getLutealPhaseColor(context);
     }
 
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        backgroundColor: colorScheme.surface,
-        title: Row(
-          children: [
-            Container(
-              width: 12,
-              height: 12,
-              decoration: BoxDecoration(
-                color: phaseColor,
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                phaseTitle,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: colorScheme.onSurface,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: phaseColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: phaseColor.withValues(alpha: 0.3),
-                ),
-              ),
-              child: Text(
-                'Day $currentCycleDay of $_averageCycleLength',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: phaseColor,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              phaseDescription,
-              style: TextStyle(
-                fontSize: 14,
-                color: colorScheme.onSurface,
-                height: 1.6,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: colorScheme.primaryContainer.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: 8,
-                children: [
-                  Text(
-                    '💡 Tips for this phase:',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                  if (currentCycleDay <= 5)
-                    Text(
-                      '• Hydrate like you mean it 💧\n• Heat, gentle movement, and rest are your friends\n• This is your permission to slow down',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: colorScheme.onPrimaryContainer,
-                        height: 1.5,
-                      ),
-                    )
-                  else if (currentCycleDay <= 13)
-                    Text(
-                      '• Say yes to that new challenge 💪\n• Push yourself - your body can handle it\n• Schedule fun plans with friends',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: colorScheme.onPrimaryContainer,
-                        height: 1.5,
-                      ),
-                    )
-                  else if (currentCycleDay <= 15)
-                    Text(
-                      '• Own your power - you\'ve got this! ✨\n• Perfect moment for big conversations\n• Channel this energy into what matters',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: colorScheme.onPrimaryContainer,
-                        height: 1.5,
-                      ),
-                    )
-                  else
-                    Text(
-                      '• Give yourself permission to rest 🌙\n• Comfort foods and cozy vibes\n• Say no to unnecessary stress',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: colorScheme.onPrimaryContainer,
-                        height: 1.5,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              'Thanks!',
-              style: TextStyle(color: colorScheme.primary),
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: phaseColor.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: phaseColor,
             ),
           ),
-        ],
-      ),
+          child: Text(
+            'Day $currentCycleDay of $_averageCycleLength',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          phaseDescription,
+          style: TextStyle(
+            fontSize: 14,
+            color: colorScheme.onSurface,
+            height: 1.6,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: colorScheme.primaryContainer.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Tips for this phase:',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onPrimaryContainer,
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (currentCycleDay <= 5)
+                Text(
+                  '• Stay hydrated\n• Heat, gentle movement, and rest are your friends\n• This is your permission to slow down',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: colorScheme.onPrimaryContainer,
+                    height: 1.5,
+                  ),
+                )
+              else if (currentCycleDay <= 13)
+                Text(
+                  '• Try new challenges\n• Push yourself - your body can handle it\n• Schedule fun plans with friends',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: colorScheme.onPrimaryContainer,
+                    height: 1.5,
+                  ),
+                )
+              else if (currentCycleDay <= 15)
+                Text(
+                  '• Own your power - you\'ve got this\n• Perfect moment for big conversations\n• Channel this energy into what matters',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: colorScheme.onPrimaryContainer,
+                    height: 1.5,
+                  ),
+                )
+              else
+                Text(
+                  '• Give yourself permission to rest\n• Comfort foods and cozy vibes\n• Say no to unnecessary stress',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: colorScheme.onPrimaryContainer,
+                    height: 1.5,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    AppDialog.showCustom(
+      context,
+      title: phaseTitle,
+      content: content,
+      actions: [
+        TextButton(
+          onPressed: () => AppDialog.dismiss(context),
+          child: const Text('Thanks!'),
+        ),
+      ],
+      type: DialogType.info,
     );
   }
 }

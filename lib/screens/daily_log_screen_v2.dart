@@ -157,12 +157,12 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
                 _buildFlowChip(
                   label: 'None',
                   icon: Icons.close,
-                  isSelected: !hasPeriod,
-                  color: colorScheme.surfaceContainerHighest,
-                  onTap: hasPeriod
+                    isSelected: !hasPeriod,
+                    color: colorScheme.surfaceContainerHighest,
+                    onTap: hasPeriod
                       ? () => _autoSave(() async {
-                            await ref.read(supabaseServiceProvider).deletePeriod(periods.first.id);
-                          })
+                        await ref.read(periodServiceProvider).deletePeriod(periods.first.id);
+                        })
                       : null,
                 ),
                 const SizedBox(width: 8),
@@ -246,14 +246,14 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
 
   Future<void> _logOrUpdatePeriod(FlowIntensity intensity, Period? existingPeriod) async {
     await _autoSave(() async {
-      final supabase = ref.read(supabaseServiceProvider);
+      final periodService = ref.read(periodServiceProvider);
       if (existingPeriod != null) {
-        await supabase.updatePeriodIntensity(
+        await periodService.updatePeriodIntensity(
           periodId: existingPeriod.id,
           intensity: intensity,
         );
       } else {
-        await supabase.startPeriod(startDate: widget.selectedDate, intensity: intensity);
+        await periodService.startPeriod(startDate: widget.selectedDate, intensity: intensity);
       }
       // Force UI refresh
       ref.invalidate(periodsStreamProvider(DateRange(
@@ -334,13 +334,13 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
 
   Future<void> _toggleMood(MoodType moodType, Mood? currentMood) async {
     await _autoSave(() async {
-      final supabase = ref.read(supabaseServiceProvider);
+      final health = ref.read(healthServiceProvider);
       if (currentMood?.moodType == moodType) {
         // Tapping same mood removes it
-        await supabase.deleteMood(currentMood!.id);
+        await health.deleteMood(currentMood!.id);
       } else {
         // Save new mood (replaces existing)
-        await supabase.saveMood(date: widget.selectedDate, mood: moodType);
+        await health.saveMood(date: widget.selectedDate, mood: moodType);
       }
       // Force UI refresh
       ref.invalidate(moodStreamProvider(widget.selectedDate));
@@ -598,7 +598,7 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
     List<Symptom> allSymptoms,
   ) async {
     await _autoSave(() async {
-      final supabase = ref.read(supabaseServiceProvider);
+      final health = ref.read(healthServiceProvider);
       final currentTypes = allSymptoms.map((s) => s.symptomType).toList();
       final severities = <SymptomType, int>{};
       for (var s in allSymptoms) {
@@ -606,7 +606,7 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
       }
       severities[symptomType] = severity;
 
-      await supabase.saveSymptoms(
+      await health.saveSymptoms(
         date: widget.selectedDate,
         symptomTypes: [...currentTypes, symptomType],
         severities: severities,
@@ -617,8 +617,8 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
 
   Future<void> _removeSymptom(Symptom symptom, List<Symptom> allSymptoms) async {
     await _autoSave(() async {
-      final supabase = ref.read(supabaseServiceProvider);
-      await supabase.deleteSymptom(symptom.id);
+      final health = ref.read(healthServiceProvider);
+      await health.deleteSymptom(symptom.id);
       ref.invalidate(symptomsStreamProvider(widget.selectedDate));
     });
   }
@@ -629,7 +629,7 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
     List<Symptom> allSymptoms,
   ) async {
     await _autoSave(() async {
-      final supabase = ref.read(supabaseServiceProvider);
+      final health = ref.read(healthServiceProvider);
       final severities = <SymptomType, int>{};
       for (var s in allSymptoms) {
         if (s.symptomType == symptom.symptomType) {
@@ -638,7 +638,7 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
           severities[s.symptomType] = s.severity ?? 3;
         }
       }
-      await supabase.saveSymptoms(
+      await health.saveSymptoms(
         date: widget.selectedDate,
         symptomTypes: allSymptoms.map((s) => s.symptomType).toList(),
         severities: severities,
@@ -835,14 +835,14 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
 
   Future<void> _toggleSexualActivity(bool hadSex, SexualActivity? existing) async {
     await _autoSave(() async {
-      final supabase = ref.read(supabaseServiceProvider);
+      final health = ref.read(healthServiceProvider);
       if (hadSex && existing == null) {
-        await supabase.logSexualActivity(
+        await health.logSexualActivity(
           date: widget.selectedDate,
           protectionUsed: false,
         );
       } else if (!hadSex && existing != null) {
-        await supabase.deleteSexualActivity(existing.id);
+        await health.deleteSexualActivity(existing.id);
       }
       // Force UI refresh
       ref.invalidate(sexualActivityStreamProvider(widget.selectedDate));
@@ -851,10 +851,10 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
 
   Future<void> _updateProtection(ProtectionType? type, SexualActivity activity) async {
     await _autoSave(() async {
-      final supabase = ref.read(supabaseServiceProvider);
+      final health = ref.read(healthServiceProvider);
       // Delete and re-create with new protection info
-      await supabase.deleteSexualActivity(activity.id);
-      await supabase.logSexualActivity(
+      await health.deleteSexualActivity(activity.id);
+      await health.logSexualActivity(
         date: widget.selectedDate,
         protectionUsed: type != null,
         protectionType: type,
@@ -918,9 +918,9 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
     if (_noteController.text.trim().isEmpty) return;
 
     await _autoSave(() async {
-      await ref.read(supabaseServiceProvider).saveNote(
-            date: widget.selectedDate,
-            content: _noteController.text.trim(),
+      await ref.read(healthServiceProvider).saveNote(
+        date: widget.selectedDate,
+        content: _noteController.text.trim(),
           );
       setState(() => _noteSaved = true);
       // Force UI refresh

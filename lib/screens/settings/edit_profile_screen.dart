@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:lovely/services/supabase_service.dart';
+import 'package:lovely/services/profile_service.dart';
 import 'package:lovely/constants/app_colors.dart';
 import 'package:lovely/utils/responsive_utils.dart';
 import 'package:lovely/core/feedback/feedback_service.dart';
@@ -44,7 +44,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final service = SupabaseService();
+      final service = ProfileService();
       
       // Get user data from database
       final userData = await service.getUserData();
@@ -83,7 +83,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() => _isCheckingUsername = true);
 
     try {
-      final available = await SupabaseService().isUsernameAvailable(username);
+      final available = await ProfileService().isUsernameAvailable(username);
       if (mounted) {
         setState(() {
           _usernameAvailable = available;
@@ -110,7 +110,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() => _isSaving = true);
 
     try {
-      final service = SupabaseService();
+      final service = ProfileService();
       final firstName = _firstNameController.text.trim();
       final lastName = _lastNameController.text.trim();
       final username = _usernameController.text.trim();
@@ -124,7 +124,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       );
 
       if (mounted) {
-        FeedbackService.showSuccess(context, 'Profile updated! ✨');
+        FeedbackService.showSuccess(context, 'Profile updated!');
         Navigator.pop(context, true); // Return true to indicate success
       }
     } catch (e) {
@@ -210,7 +210,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                     onPressed: () {
                                       FeedbackService.showInfo(
                                         context,
-                                        'Profile picture upload coming soon 📸',
+                                        'Profile picture upload coming soon',
                                       );
                                     },
                                     padding: EdgeInsets.zero,

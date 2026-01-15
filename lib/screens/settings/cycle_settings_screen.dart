@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../services/supabase_service.dart';
+import '../../services/profile_service.dart';
 import '../../services/cycle_analyzer.dart';
 import '../../constants/app_colors.dart';
 import '../../core/feedback/feedback_service.dart';
@@ -17,7 +17,7 @@ class CycleSettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _CycleSettingsScreenState extends ConsumerState<CycleSettingsScreen> {
-  final _supabase = SupabaseService();
+  final _supabase = ProfileService();
   bool _isLoading = true;
   bool _isSaving = false;
 
@@ -92,7 +92,7 @@ class _CycleSettingsScreenState extends ConsumerState<CycleSettingsScreen> {
       if (mounted) {
         FeedbackService.showSuccess(
           context,
-          'Cycle settings updated! Your predictions will reflect these changes ✨',
+          'Cycle settings updated. Your predictions will reflect these changes.',
         );
       }
     } catch (e) {
@@ -171,7 +171,7 @@ class _CycleSettingsScreenState extends ConsumerState<CycleSettingsScreen> {
             const SizedBox(height: 16),
             if (totalPredictions == 0)
               Text(
-                'Not enough data yet. Track at least 2 cycles to see your personalized accuracy 📊',
+                'Not enough data yet. Track at least 2 cycles to see your personalized accuracy',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: AppColors.getTextSecondaryColor(context),
                     ),
@@ -424,7 +424,7 @@ class _CycleSettingsScreenState extends ConsumerState<CycleSettingsScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            '• We learn from your actual cycles over time ✨\n'
+            '• We learn from your actual cycles over time\n'
             '• Predictions get smarter after 2-3 cycles\n'
             '• Regular cycles = more confident predictions\n'
             '• Your manual adjustments help us improve',

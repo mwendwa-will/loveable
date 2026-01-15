@@ -4,8 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:lovely/screens/auth/forgot_password.dart';
 import 'package:lovely/providers/period_provider.dart';
+import 'package:lovely/services/auth_service.dart';
+import 'package:lovely/services/profile_service.dart';
 import 'package:lovely/screens/onboarding/onboarding_screen.dart';
 import 'package:lovely/screens/main/home_screen.dart';
+import 'package:lovely/navigation/app_router.dart';
 import 'package:lovely/core/feedback/feedback_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -38,27 +41,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       });
 
       try {
-        final supabase = ref.read(supabaseServiceProvider);
-        final response = await supabase.signIn(
+        final auth = AuthService();
+        final response = await auth.signIn(
           emailOrUsername: _emailOrUsernameController.text.trim(),
           password: _passwordController.text,
         );
 
         if (response.session != null && mounted) {
           // Check if user has completed onboarding
-          final hasCompleted = await supabase.hasCompletedOnboarding();
+          final hasCompleted = await ProfileService().hasCompletedOnboarding();
 
           if (mounted) {
             if (hasCompleted) {
               // Navigate to home screen
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const HomeScreen()),
-              );
+              Navigator.of(context).pushReplacementNamed(AppRoutes.home);
             } else {
               // Navigate to onboarding
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-              );
+              Navigator.of(context).pushReplacementNamed(AppRoutes.onboarding);
             }
           }
         }
@@ -256,12 +255,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       hint: 'Reset your password',
                       child: TextButton(
                         onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const ForgotPasswordScreen(),
-                            ),
-                          );
+                          Navigator.of(context).pushNamed(AppRoutes.forgotPassword);
                         },
                         child: const Text(
                           'Forgot Password?',

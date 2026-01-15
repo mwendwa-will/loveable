@@ -4,11 +4,35 @@ import 'dart:convert';
 
 /// Service for managing app-specific PIN security
 /// Provides secure PIN storage and verification for app privacy
+// Minimal storage interface used by PinService — allows swapping implementations for tests.
+abstract class SecureStorageInterface {
+  Future<void> write({required String key, required String value});
+  Future<String?> read({required String key});
+  Future<void> delete({required String key});
+}
+
+class _FlutterSecureStorageAdapter implements SecureStorageInterface {
+  final FlutterSecureStorage _inner;
+  const _FlutterSecureStorageAdapter() : _inner = const FlutterSecureStorage();
+
+  @override
+  Future<void> write({required String key, required String value}) => _inner.write(key: key, value: value);
+
+  @override
+  Future<String?> read({required String key}) => _inner.read(key: key);
+
+  @override
+  Future<void> delete({required String key}) => _inner.delete(key: key);
+}
+
 class PinService {
-  static const _storage = FlutterSecureStorage();
+  final SecureStorageInterface _storage;
+
   static const _pinKey = 'app_pin_hash';
   static const _pinEnabledKey = 'pin_enabled';
   static const _lockTimestampKey = 'lock_timestamp';
+
+  PinService({SecureStorageInterface? storage}) : _storage = storage ?? const _FlutterSecureStorageAdapter();
   
   /// Timeout duration before automatic logout (30 minutes)
   /// Similar to banking apps for enhanced security

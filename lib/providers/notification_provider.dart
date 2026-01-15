@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lovely/services/supabase_service.dart';
+import 'package:lovely/services/notification_prefs_service.dart';
 
 /// Model for notification preferences
 class NotificationPreferences {
@@ -70,11 +70,11 @@ class NotificationPreferences {
 /// Notification preferences state notifier
 class NotificationPreferencesNotifier
     extends Notifier<NotificationPreferences> {
-  late SupabaseService _supabaseService;
+  late NotificationPrefsService _prefsService;
 
   @override
   NotificationPreferences build() {
-    _supabaseService = SupabaseService();
+    _prefsService = NotificationPrefsService();
     // Load preferences on initialization
     loadPreferences();
     return NotificationPreferences();
@@ -83,7 +83,7 @@ class NotificationPreferencesNotifier
   /// Load notification preferences from Supabase
   Future<void> loadPreferences() async {
     try {
-      final data = await _supabaseService.getNotificationPreferencesData();
+      final data = await _prefsService.getNotificationPreferencesData();
       if (data != null) {
         state = NotificationPreferences(
           periodRemindersEnabled:
@@ -110,7 +110,7 @@ class NotificationPreferencesNotifier
   Future<void> updatePreferences(NotificationPreferences preferences) async {
     try {
       state = preferences;
-      await _supabaseService.saveNotificationPreferencesData({
+      await _prefsService.saveNotificationPreferencesData({
         'periodRemindersEnabled': preferences.periodRemindersEnabled,
         'periodReminderHour': preferences.periodReminderHour,
         'periodReminderMinute': preferences.periodReminderMinute,

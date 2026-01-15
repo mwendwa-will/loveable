@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:lovely/services/supabase_service.dart';
+import 'package:lovely/services/auth_service.dart';
 import 'package:lovely/constants/app_colors.dart';
 import 'package:lovely/core/feedback/feedback_service.dart';
 
@@ -26,12 +26,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Future<void> _handleResetPassword() async {
     if (_formKey.currentState!.validate()) {
       // Check if current user is trying to reset and hasn't verified email
-      final service = SupabaseService();
-      final currentUser = service.currentUser;
+      final auth = AuthService();
+      final currentUser = auth.currentUser;
 
       if (currentUser != null &&
           currentUser.email == _emailController.text.trim() &&
-          !service.isEmailVerified) {
+          !auth.isEmailVerified) {
         FeedbackService.showWarning(
           context,
           'Let\'s verify your email first to enable password recovery',
@@ -42,7 +42,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       setState(() => _isLoading = true);
 
       try {
-        await service.resetPassword(email: _emailController.text.trim());
+        await AuthService().resetPassword(email: _emailController.text.trim());
 
         if (mounted) {
           setState(() {

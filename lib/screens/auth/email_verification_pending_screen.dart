@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:lovely/services/supabase_service.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
+import 'package:lovely/services/auth_service.dart';
 import 'package:lovely/core/feedback/feedback_service.dart';
 import 'package:lovely/core/exceptions/app_exceptions.dart';
 
@@ -21,7 +20,7 @@ class _EmailVerificationPendingScreenState
 
   @override
   Widget build(BuildContext context) {
-    final user = SupabaseService().currentUser;
+    final user = AuthService().currentUser;
     final email = user?.email ?? '';
 
     return Scaffold(
@@ -51,7 +50,7 @@ class _EmailVerificationPendingScreenState
 
               // Title
               Text(
-                'Let\'s verify your email ✉️',
+                'Let\'s verify your email',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -164,15 +163,12 @@ class _EmailVerificationPendingScreenState
     });
 
     try {
-      final user = SupabaseService().currentUser;
+      final user = AuthService().currentUser;
       if (user?.email == null) {
         throw AuthException('No email found', code: 'AUTH_008');
       }
 
-      await Supabase.instance.client.auth.resend(
-        type: OtpType.signup,
-        email: user!.email!,
-      );
+      await AuthService().resendVerificationEmail();
 
       setState(() {
         _resendMessage = 'Verification email sent! Please check your inbox.';
@@ -188,7 +184,7 @@ class _EmailVerificationPendingScreenState
 
   Future<void> _logout() async {
     try {
-      await SupabaseService().signOut();
+      await AuthService().signOut();
       // AuthGate will automatically redirect to WelcomeScreen
     } catch (e) {
       if (mounted) {

@@ -105,7 +105,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
       HapticFeedback.mediumImpact();
       
       if (mounted) {
-        FeedbackService.showSuccess(context, 'PIN enabled! Your data is now protected 🔒');
+        FeedbackService.showSuccess(context, 'PIN enabled! Your data is now protected');
         Navigator.pop(context, true);
       }
     } catch (e) {

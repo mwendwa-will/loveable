@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lovely/services/supabase_service.dart';
+import 'package:lovely/services/profile_service.dart';
 
 class UserProfile {
   final String firstName;
@@ -54,11 +54,11 @@ class UserProfile {
 }
 
 class ProfileNotifier extends Notifier<UserProfile> {
-  late SupabaseService _supabaseService;
+  late ProfileService _supabaseService;
   
   @override
   UserProfile build() {
-    _supabaseService = SupabaseService();
+    _supabaseService = ProfileService();
     loadProfile();
     return UserProfile(firstName: 'Loading...');
   }

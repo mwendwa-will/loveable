@@ -65,8 +65,8 @@ class _DailyLogScreenState extends ConsumerState<DailyLogScreen> {
   }
 
   Future<bool> _checkPeriodOnDate(DateTime date) async {
-    final supabase = ref.read(supabaseServiceProvider);
-    final periods = await supabase
+    final periodService = ref.read(periodServiceProvider);
+    final periods = await periodService
         .getPeriodsStream(
           startDate: date,
           endDate: date.add(const Duration(days: 1)),
@@ -109,10 +109,10 @@ class _DailyLogScreenState extends ConsumerState<DailyLogScreen> {
       }
     }
 
-    final supabase = ref.read(supabaseServiceProvider);
+    final health = ref.read(healthServiceProvider);
     try {
-      if (_hadSex) {
-        await supabase.logSexualActivity(
+        if (_hadSex) {
+        await health.logSexualActivity(
           date: widget.selectedDate,
           protectionUsed: _protectionUsed,
           protectionType: _protectionType,
@@ -125,7 +125,7 @@ class _DailyLogScreenState extends ConsumerState<DailyLogScreen> {
           sexualActivityStreamProvider(widget.selectedDate).future,
         );
         if (sexualActivity != null) {
-          await supabase.deleteSexualActivity(sexualActivity.id);
+          await health.deleteSexualActivity(sexualActivity.id);
           if (mounted) {
             FeedbackService.showSuccess(context, 'Sexual activity removed');
           }
@@ -143,9 +143,9 @@ class _DailyLogScreenState extends ConsumerState<DailyLogScreen> {
   Future<void> _saveNote() async {
     if (_noteController.text.trim().isEmpty) return;
 
-    final supabase = ref.read(supabaseServiceProvider);
+    final health = ref.read(healthServiceProvider);
     try {
-      await supabase.saveNote(
+      await health.saveNote(
         date: widget.selectedDate,
         content: _noteController.text.trim(),
       );
@@ -283,7 +283,7 @@ class _DailyLogScreenState extends ConsumerState<DailyLogScreen> {
                       if (selectedMood != null) {
                         try {
                           await ref
-                              .read(supabaseServiceProvider)
+                              .read(healthServiceProvider)
                               .saveMood(
                                 date: widget.selectedDate,
                                 mood: selectedMood,
@@ -357,8 +357,8 @@ class _DailyLogScreenState extends ConsumerState<DailyLogScreen> {
                         if (confirmed == true) {
                           try {
                             await ref
-                                .read(supabaseServiceProvider)
-                                .deleteMood(mood.id);
+                              .read(healthServiceProvider)
+                              .deleteMood(mood.id);
 
                             if (mounted) {
                               FeedbackService.showSuccess(
@@ -486,7 +486,7 @@ class _DailyLogScreenState extends ConsumerState<DailyLogScreen> {
                           severities[selectedSymptom] = severity;
 
                           await ref
-                              .read(supabaseServiceProvider)
+                              .read(healthServiceProvider)
                               .saveSymptoms(
                                 date: widget.selectedDate,
                                 symptomTypes: updatedSymptoms,
@@ -569,8 +569,8 @@ class _DailyLogScreenState extends ConsumerState<DailyLogScreen> {
                             if (confirmed == true) {
                               try {
                                 await ref
-                                    .read(supabaseServiceProvider)
-                                    .deleteSymptom(symptom.id);
+                                  .read(healthServiceProvider)
+                                  .deleteSymptom(symptom.id);
 
                                 if (mounted) {
                                   FeedbackService.showSuccess(
@@ -1030,8 +1030,8 @@ class _DailyLogScreenState extends ConsumerState<DailyLogScreen> {
 
                           if (confirmed == true) {
                             try {
-                              await ref
-                                  .read(supabaseServiceProvider)
+                                await ref
+                                  .read(periodServiceProvider)
                                   .deletePeriod(period.id);
 
                               if (mounted) {
@@ -1127,7 +1127,7 @@ class _DailyLogScreenState extends ConsumerState<DailyLogScreen> {
 
     if (intensity != null) {
       try {
-        await ref.read(supabaseServiceProvider).startPeriod(
+        await ref.read(periodServiceProvider).startPeriod(
               startDate: widget.selectedDate,
               intensity: intensity,
             );

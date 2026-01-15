@@ -5,7 +5,7 @@
 // 2. Replace the placeholder values with your actual Supabase credentials
 // 3. Get your credentials from: https://app.supabase.com/project/_/settings/api
 //
-// ⚠️ IMPORTANT: Never commit supabase_config.dart to version control!
+// IMPORTANT: Never commit supabase_config.dart to version control!
 
 class SupabaseConfig {
   // Your Supabase project URL

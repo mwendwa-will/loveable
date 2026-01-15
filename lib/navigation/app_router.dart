@@ -1,0 +1,100 @@
+import 'package:flutter/material.dart';
+import 'package:lovely/screens/auth/welcome_screen.dart';
+import 'package:lovely/screens/auth/login.dart';
+import 'package:lovely/screens/auth/signup.dart';
+import 'package:lovely/screens/auth/forgot_password.dart';
+import 'package:lovely/screens/onboarding/onboarding_screen.dart';
+import 'package:lovely/screens/main/home_screen.dart';
+import 'package:lovely/screens/main/profile_screen.dart';
+import 'package:lovely/screens/calendar_screen.dart';
+import 'package:lovely/screens/daily_log_screen_v2.dart';
+import 'package:lovely/screens/settings/edit_profile_screen.dart';
+import 'package:lovely/screens/settings/change_password_screen.dart';
+import 'package:lovely/screens/settings/notifications_settings_screen.dart';
+import 'package:lovely/screens/settings/cycle_settings_screen.dart';
+import 'package:lovely/screens/security/pin_setup_screen.dart';
+import 'package:lovely/screens/security/pin_unlock_screen.dart';
+
+/// Centralized route names used across the app.
+abstract class AppRoutes {
+  static const String welcome = '/';
+  static const String home = '/home';
+  static const String onboarding = '/onboarding';
+  static const String forgotPassword = '/forgot-password';
+  static const String login = '/login';
+  static const String signup = '/signup';
+  static const String profile = '/profile';
+  static const String calendar = '/calendar';
+  static const String dailyLog = '/daily-log';
+  static const String editProfile = '/settings/edit-profile';
+  static const String changePassword = '/settings/change-password';
+  static const String notificationsSettings = '/settings/notifications';
+  static const String cycleSettings = '/settings/cycle';
+  static const String pinSetup = '/security/pin-setup';
+  static const String pinUnlock = '/pin-unlock';
+}
+
+/// Simple centralized router using named routes. Keeps navigation
+/// logic in one place so future migration to `auto_route` is straightforward.
+class AppRouter {
+  static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
+    switch (settings.name) {
+      case AppRoutes.welcome:
+        return MaterialPageRoute(builder: (_) => const WelcomeScreen());
+      case AppRoutes.login:
+        return MaterialPageRoute(builder: (_) => const LoginScreen());
+      case AppRoutes.signup:
+        return MaterialPageRoute(builder: (_) => const SignUpScreen());
+      case AppRoutes.profile:
+        return MaterialPageRoute(builder: (_) => const ProfileScreen());
+      case AppRoutes.calendar:
+        return MaterialPageRoute(builder: (_) => const CalendarScreen());
+      case AppRoutes.dailyLog:
+        final args = settings.arguments as Map<String, dynamic>?;
+        final date = args?['selectedDate'] as DateTime?;
+        if (date == null) {
+          return MaterialPageRoute(builder: (_) => DailyLogScreenV2(selectedDate: DateTime.now()));
+        }
+        return MaterialPageRoute(builder: (_) => DailyLogScreenV2(selectedDate: date));
+      case AppRoutes.editProfile:
+        return MaterialPageRoute(builder: (_) => const EditProfileScreen());
+      case AppRoutes.changePassword:
+        return MaterialPageRoute(builder: (_) => const ChangePasswordScreen());
+      case AppRoutes.notificationsSettings:
+        return MaterialPageRoute(builder: (_) => const NotificationsSettingsScreen());
+      case AppRoutes.cycleSettings:
+        return MaterialPageRoute(builder: (_) => const CycleSettingsScreen());
+      case AppRoutes.pinSetup:
+        return MaterialPageRoute(builder: (_) => const PinSetupScreen());
+      case AppRoutes.onboarding:
+        return MaterialPageRoute(builder: (_) => const OnboardingScreen());
+      case AppRoutes.forgotPassword:
+        return MaterialPageRoute(builder: (_) => const ForgotPasswordScreen());
+      case AppRoutes.home:
+        return MaterialPageRoute(builder: (_) => const HomeScreen());
+      case AppRoutes.pinUnlock:
+        final args = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (ctx) => PinUnlockScreen(
+            onUnlocked: args?['onUnlocked'] as VoidCallback?,
+          ),
+          fullscreenDialog: true,
+        );
+      default:
+        return null;
+    }
+  }
+
+  // Convenience helpers
+  static Future<T?> pushNamed<T>(BuildContext context, String name, {Object? arguments}) {
+    return Navigator.of(context).pushNamed<T>(name, arguments: arguments);
+  }
+
+  static Future<T?> pushReplacementNamed<T, U>(BuildContext context, String name, {Object? arguments}) {
+    return Navigator.of(context).pushReplacementNamed<T, U>(name, arguments: arguments);
+  }
+
+  static void pop(BuildContext context, [Object? result]) {
+    Navigator.of(context).pop(result);
+  }
+}

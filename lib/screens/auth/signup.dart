@@ -2,11 +2,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:lovely/screens/auth/login.dart';
-import 'package:lovely/screens/onboarding/onboarding_screen.dart';
-import 'package:lovely/providers/period_provider.dart';
+import 'package:lovely/navigation/app_router.dart';
 import 'package:lovely/core/feedback/feedback_service.dart';
 import 'package:lovely/core/exceptions/app_exceptions.dart';
+import 'package:lovely/services/auth_service.dart';
+import 'package:lovely/services/profile_service.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
@@ -60,8 +60,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       // Debounce: wait 500ms before checking
       await Future.delayed(const Duration(milliseconds: 500));
 
-      final supabase = ref.read(supabaseServiceProvider);
-      final available = await supabase.isUsernameAvailable(username);
+      final profile = ProfileService();
+      final available = await profile.isUsernameAvailable(username);
 
       if (mounted) {
         setState(() {
@@ -88,10 +88,10 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       });
 
       try {
-        final supabase = ref.read(supabaseServiceProvider);
+        final auth = AuthService();
         
-        debugPrint('📝 Attempting signup...');
-        final response = await supabase.signUp(
+        debugPrint('Attempting signup...');
+        final response = await auth.signUp(
           email: _emailController.text.trim(),
           password: _passwordController.text,
           username: _usernameController.text.trim(),
@@ -99,32 +99,30 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           lastName: _lastNameController.text.trim(),
         );
 
-        debugPrint('✅ Signup response received');
-        debugPrint('👤 User: ${response.user?.email}');
-        debugPrint('🔑 Session: ${response.session?.accessToken != null ? 'Created' : 'Not created'}');
+        debugPrint('Signup response received');
+        debugPrint('User: ${response.user?.email}');
+        debugPrint('Session: ${response.session?.accessToken != null ? 'Created' : 'Not created'}');
 
         if (response.user != null && mounted) {
           // Wait a moment for auth state to stabilize
           await Future.delayed(const Duration(milliseconds: 500));
           
-          debugPrint('🔄 Checking auth state after signup...');
-          final currentUser = supabase.currentUser;
-          final currentSession = supabase.currentSession;
+          debugPrint('Checking auth state after signup...');
+          final currentUser = auth.currentUser;
+          final currentSession = auth.currentSession;
           
-          debugPrint('👤 Current user: ${currentUser?.email}');
-          debugPrint('🔑 Current session: ${currentSession != null ? 'Valid' : 'None'}');
+          debugPrint('Current user: ${currentUser?.email}');
+          debugPrint('Current session: ${currentSession != null ? 'Valid' : 'None'}');
           
           if (mounted) {
             // Navigate to onboarding after successful signup
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-            );
+            Navigator.of(context).pushReplacementNamed(AppRoutes.onboarding);
           }
         } else {
           throw AuthException('Signup failed: No user returned', code: 'AUTH_007');
         }
       } catch (e) {
-        debugPrint('❌ Signup error: $e');
+        debugPrint('Signup error: $e');
         if (mounted) {
           setState(() {
             _errorMessage = FeedbackService.getErrorMessage(e);
@@ -640,11 +638,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                         hint: 'Navigate to sign in',
                         child: TextButton(
                           onPressed: () {
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(
-                                builder: (context) => const LoginScreen(),
-                              ),
-                            );
+                            Navigator.of(context).pushReplacementNamed(AppRoutes.login);
                           },
                           child: const Text(
                             'Sign In',

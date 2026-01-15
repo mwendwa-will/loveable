@@ -40,7 +40,7 @@ class NotificationsSettingsScreen extends ConsumerWidget {
                   SizedBox(width: context.responsive.spacingMd),
                   Expanded(
                     child: Text(
-                      'Get gentle reminders to help you stay on track with your wellness journey ✨',
+                      'Get gentle reminders to help you stay on track with your wellness journey',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppColors.primary,
                       ),
