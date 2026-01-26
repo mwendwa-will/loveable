@@ -12,6 +12,17 @@
 .swiftpm/
 migrate_working_dir/
 
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Next.js build output
+.next/
+out/
+
+# General build outputs
+dist/
+
 # Supabase configuration (contains sensitive keys)
 lib/config/supabase_config.dart
 

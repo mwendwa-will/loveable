@@ -1,0 +1,23 @@
+// This file contains the provider for entitlements.
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lovely/services/entitlements_service.dart';
+
+final entitlementsProviderNew = StateNotifierProvider<EntitlementsNotifier, List<Map<String, dynamic>>>((ref) {
+  return EntitlementsNotifier(ref);
+});
+
+class EntitlementsNotifier extends StateNotifier<List<Map<String, dynamic>>> {
+  final Ref _ref;
+  final EntitlementsService _service = EntitlementsService();
+
+  EntitlementsNotifier(this._ref) : super([]) {
+    load();
+  }
+
+  Future<void> load() async {
+    try {
+      final items = await _service.fetchEntitlements();
+      // Re-export the canonical entitlements provider
+      export 'entitlements.dart';
+      // keep existing state on error

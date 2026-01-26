@@ -17,7 +17,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _usernameController = TextEditingController();
-  
+
   bool _isLoading = false;
   bool _isSaving = false;
   bool _isCheckingUsername = false;
@@ -25,6 +25,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   String? _usernameError;
   String? _originalUsername;
   DateTime? _dateOfBirth;
+  String _userName = 'User';
 
   @override
   void initState() {
@@ -45,20 +46,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     try {
       final service = ProfileService();
-      
+
       // Get user data from database
       final userData = await service.getUserData();
       if (userData != null) {
-        _firstNameController.text = userData['first_name'] as String? ?? '';
-        _lastNameController.text = userData['last_name'] as String? ?? '';
-        _usernameController.text = userData['username'] as String? ?? '';
-        _originalUsername = _usernameController.text;
-        
-        // Parse date of birth if available
-        final dobStr = userData['date_of_birth'] as String?;
-        if (dobStr != null) {
-          _dateOfBirth = DateTime.parse(dobStr);
-        }
+        setState(() {
+          _userName = userData['first_name'] as String? ?? '';
+          _firstNameController.text = _userName;
+          _lastNameController.text = userData['last_name'] as String? ?? '';
+          _usernameController.text = userData['username'] as String? ?? '';
+          _originalUsername = _usernameController.text;
+
+          // Parse date of birth if available
+          final dobStr = userData['date_of_birth'] as String?;
+          if (dobStr != null) {
+            _dateOfBirth = DateTime.parse(dobStr);
+          }
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -114,7 +118,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final firstName = _firstNameController.text.trim();
       final lastName = _lastNameController.text.trim();
       final username = _usernameController.text.trim();
-      
+
       // Update profile using SupabaseService method
       await service.updateUserProfile(
         firstName: firstName,
@@ -147,7 +151,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           if (_isSaving)
             Center(
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: context.responsive.spacingMd),
+                padding: EdgeInsets.symmetric(
+                  horizontal: context.responsive.spacingMd,
+                ),
                 child: const SizedBox(
                   width: 20,
                   height: 20,
@@ -156,10 +162,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
             )
           else
-            TextButton(
-              onPressed: _saveProfile,
-              child: const Text('Save'),
-            ),
+            TextButton(onPressed: _saveProfile, child: const Text('Save')),
         ],
       ),
       body: _isLoading
@@ -179,20 +182,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       ),
                     ),
                     SizedBox(height: context.responsive.spacingLg),
-                    
+
                     // Profile Picture Section (placeholder for now)
                     Center(
                       child: Column(
                         children: [
                           Stack(
                             children: [
-                              CircleAvatar(
+                              _buildInitialsAvatar(
                                 radius: 60,
-                                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                                child: FaIcon(
-                                  FontAwesomeIcons.user,
-                                  size: 50,
-                                  color: AppColors.primary,
+                                backgroundColor: AppColors.primary.withValues(
+                                  alpha: 0.1,
                                 ),
                               ),
                               Positioned(
@@ -210,7 +210,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                     onPressed: () {
                                       FeedbackService.showInfo(
                                         context,
-                                        'Profile picture upload coming soon',
+                                        'Photo upload will be available in Phase 2',
                                       );
                                     },
                                     padding: EdgeInsets.zero,
@@ -222,20 +222,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           SizedBox(height: context.responsive.spacingSm),
                           Text(
                             'Change Photo',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.primary,
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: AppColors.primary),
                           ),
                         ],
                       ),
                     ),
-                    
+
                     SizedBox(height: context.responsive.spacingLg),
 
                     // Form Fields Card
                     Card(
                       elevation: 0,
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest
+                          .withValues(alpha: 0.3),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
@@ -249,149 +251,174 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               'First Name',
                               style: Theme.of(context).textTheme.titleSmall,
                             ),
-                    SizedBox(height: context.responsive.spacingSm),
-                    TextFormField(
-                      controller: _firstNameController,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: InputDecoration(
-                        hintText: 'Enter your first name',
-                        prefixIcon: const Icon(FontAwesomeIcons.user, size: 20),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Please enter your first name';
-                        }
-                        return null;
-                      },
-                    ),
-
-                    SizedBox(height: context.responsive.spacingMd),
-
-                    // Last Name
-                    Text(
-                      'Last Name (Optional)',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    SizedBox(height: context.responsive.spacingSm),
-                    TextFormField(
-                      controller: _lastNameController,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: InputDecoration(
-                        hintText: 'Enter your last name',
-                        prefixIcon: const Icon(FontAwesomeIcons.user, size: 20),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-
-                    SizedBox(height: context.responsive.spacingMd),
-
-                    // Username
-                    Text(
-                      'Username',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    SizedBox(height: context.responsive.spacingSm),
-                    TextFormField(
-                      controller: _usernameController,
-                      decoration: InputDecoration(
-                        hintText: 'Choose a unique username',
-                        prefixIcon: const Icon(FontAwesomeIcons.at, size: 20),
-                        suffixIcon: _isCheckingUsername
-                            ? const Padding(
-                                padding: EdgeInsets.all(12.0),
-                                child: SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                            SizedBox(height: context.responsive.spacingSm),
+                            TextFormField(
+                              controller: _firstNameController,
+                              textCapitalization: TextCapitalization.words,
+                              decoration: InputDecoration(
+                                hintText: 'Enter your first name',
+                                prefixIcon: const Icon(
+                                  FontAwesomeIcons.user,
+                                  size: 20,
                                 ),
-                              )
-                            : _usernameController.text.length >= 3 &&
-                                    _usernameController.text != _originalUsername
-                                ? Icon(
-                                    _usernameAvailable ? Icons.check_circle : Icons.error,
-                                    color: _usernameAvailable ? Colors.green : Colors.red,
-                                  )
-                                : null,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        errorText: _usernameError,
-                        helperText: 'Letters, numbers, _, -, . (3-30 chars)',
-                      ),
-                      onChanged: (value) {
-                        if (value.length >= 3) {
-                          _checkUsernameAvailability(value);
-                        } else {
-                          setState(() {
-                            _usernameError = null;
-                            _usernameAvailable = true;
-                          });
-                        }
-                      },
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a username';
-                        }
-                        if (value.length < 3) {
-                          return 'Username must be at least 3 characters';
-                        }
-                        if (value.length > 30) {
-                          return 'Username must be 30 characters or less';
-                        }
-                        if (!RegExp(r'^[a-zA-Z0-9._-]+$').hasMatch(value)) {
-                          return 'Only letters, numbers, _, -, . allowed';
-                        }
-                        if (!_usernameAvailable) {
-                          return 'Username already taken';
-                        }
-                        return null;
-                      },
-                    ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Please enter your first name';
+                                }
+                                return null;
+                              },
+                            ),
 
-                    SizedBox(height: context.responsive.spacingMd),
+                            SizedBox(height: context.responsive.spacingMd),
 
-                    // Date of Birth (Optional)
-                    Text(
-                      'Date of Birth (Optional)',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    SizedBox(height: context.responsive.spacingSm),
-                    InkWell(
-                      onTap: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: _dateOfBirth ?? DateTime(2000),
-                          firstDate: DateTime(1950),
-                          lastDate: DateTime.now(),
-                        );
-                        if (picked != null) {
-                          setState(() => _dateOfBirth = picked);
-                        }
-                      },
-                      child: InputDecorator(
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(FontAwesomeIcons.cakeCandles, size: 20),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(
-                          _dateOfBirth != null
-                              ? '${_dateOfBirth!.month}/${_dateOfBirth!.day}/${_dateOfBirth!.year}'
-                              : 'Select your date of birth',
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: _dateOfBirth != null
-                                ? Theme.of(context).textTheme.bodyLarge?.color
-                                : Theme.of(context).hintColor,
-                          ),
-                        ),
-                      ),
-                    ),
+                            // Last Name
+                            Text(
+                              'Last Name (Optional)',
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                            SizedBox(height: context.responsive.spacingSm),
+                            TextFormField(
+                              controller: _lastNameController,
+                              textCapitalization: TextCapitalization.words,
+                              decoration: InputDecoration(
+                                hintText: 'Enter your last name',
+                                prefixIcon: const Icon(
+                                  FontAwesomeIcons.user,
+                                  size: 20,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+
+                            SizedBox(height: context.responsive.spacingMd),
+
+                            // Username
+                            Text(
+                              'Username',
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                            SizedBox(height: context.responsive.spacingSm),
+                            TextFormField(
+                              controller: _usernameController,
+                              decoration: InputDecoration(
+                                hintText: 'Choose a unique username',
+                                prefixIcon: const Icon(
+                                  FontAwesomeIcons.at,
+                                  size: 20,
+                                ),
+                                suffixIcon: _isCheckingUsername
+                                    ? const Padding(
+                                        padding: EdgeInsets.all(12.0),
+                                        child: SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        ),
+                                      )
+                                    : _usernameController.text.length >= 3 &&
+                                          _usernameController.text !=
+                                              _originalUsername
+                                    ? Icon(
+                                        _usernameAvailable
+                                            ? Icons.check_circle
+                                            : Icons.error,
+                                        color: _usernameAvailable
+                                            ? Colors.green
+                                            : Colors.red,
+                                      )
+                                    : null,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                errorText: _usernameError,
+                                helperText:
+                                    'Letters, numbers, _, -, . (3-30 chars)',
+                              ),
+                              onChanged: (value) {
+                                if (value.length >= 3) {
+                                  _checkUsernameAvailability(value);
+                                } else {
+                                  setState(() {
+                                    _usernameError = null;
+                                    _usernameAvailable = true;
+                                  });
+                                }
+                              },
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter a username';
+                                }
+                                if (value.length < 3) {
+                                  return 'Username must be at least 3 characters';
+                                }
+                                if (value.length > 30) {
+                                  return 'Username must be 30 characters or less';
+                                }
+                                if (!RegExp(
+                                  r'^[a-zA-Z0-9._-]+$',
+                                ).hasMatch(value)) {
+                                  return 'Only letters, numbers, _, -, . allowed';
+                                }
+                                if (!_usernameAvailable) {
+                                  return 'Username already taken';
+                                }
+                                return null;
+                              },
+                            ),
+
+                            SizedBox(height: context.responsive.spacingMd),
+
+                            // Date of Birth (Optional)
+                            Text(
+                              'Date of Birth (Optional)',
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                            SizedBox(height: context.responsive.spacingSm),
+                            InkWell(
+                              onTap: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: _dateOfBirth ?? DateTime(2000),
+                                  firstDate: DateTime(1950),
+                                  lastDate: DateTime.now(),
+                                );
+                                if (picked != null) {
+                                  setState(() => _dateOfBirth = picked);
+                                }
+                              },
+                              child: InputDecorator(
+                                decoration: InputDecoration(
+                                  prefixIcon: const Icon(
+                                    FontAwesomeIcons.cakeCandles,
+                                    size: 20,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Text(
+                                  _dateOfBirth != null
+                                      ? '${_dateOfBirth!.month}/${_dateOfBirth!.day}/${_dateOfBirth!.year}'
+                                      : 'Select your date of birth',
+                                  style: Theme.of(context).textTheme.bodyLarge
+                                      ?.copyWith(
+                                        color: _dateOfBirth != null
+                                            ? Theme.of(
+                                                context,
+                                              ).textTheme.bodyLarge?.color
+                                            : Theme.of(context).hintColor,
+                                      ),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -405,9 +432,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       child: FilledButton.icon(
                         onPressed: _isSaving ? null : _saveProfile,
                         style: FilledButton.styleFrom(
-                          padding: EdgeInsets.symmetric(
-                            vertical: 16,
-                          ),
+                          padding: EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -418,7 +443,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
                                 ),
                               )
                             : const FaIcon(FontAwesomeIcons.floppyDisk),
@@ -432,21 +459,51 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: TextButton(
-                        onPressed: _isSaving ? null : () => Navigator.pop(context),
+                        onPressed: _isSaving
+                            ? null
+                            : () => Navigator.pop(context),
                         style: TextButton.styleFrom(
-                          padding: EdgeInsets.symmetric(
-                            vertical: 16,
-                          ),
+                          padding: EdgeInsets.symmetric(vertical: 16),
                         ),
                         child: const Text('Cancel'),
                       ),
                     ),
-                    
+
                     SizedBox(height: context.responsive.spacingMd),
                   ],
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildInitialsAvatar({
+    required double radius,
+    Color? backgroundColor,
+  }) {
+    String initials = '';
+    if (_userName.isNotEmpty) {
+      final parts = _userName.trim().split(RegExp(r'\s+'));
+      if (parts.length >= 2 && parts[1].isNotEmpty) {
+        initials = (parts[0][0] + parts[1][0]).toUpperCase();
+      } else if (parts.isNotEmpty && parts[0].isNotEmpty) {
+        initials = parts[0][0].toUpperCase();
+      }
+    }
+
+    if (initials.isEmpty) initials = 'U';
+
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: backgroundColor ?? Colors.white,
+      child: Text(
+        initials,
+        style: TextStyle(
+          fontSize: radius * 0.8,
+          fontWeight: FontWeight.bold,
+          color: backgroundColor != null ? AppColors.primary : Colors.white,
+        ),
+      ),
     );
   }
 }

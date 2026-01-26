@@ -4,6 +4,8 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:lovely/services/profile_service.dart';
 import 'package:lovely/services/auth_service.dart';
 import 'package:lovely/services/pin_service.dart';
+import 'package:lovely/services/period_service.dart';
+import 'package:lovely/services/export_service.dart';
 import 'package:lovely/constants/app_colors.dart';
 import 'package:lovely/utils/responsive_utils.dart';
 import 'package:lovely/navigation/app_router.dart';
@@ -32,16 +34,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Future<void> _loadUserData() async {
     setState(() => _isLoading = true);
-    
+
     try {
       final profileService = ProfileService();
       final authService = AuthService();
       final user = authService.currentUser;
       final userData = await profileService.getUserData();
-      
+
       if (mounted) {
         setState(() {
-          _userName = userData?['first_name'] as String? ?? user?.userMetadata?['name'] as String? ?? 'User';
+          _userName =
+              userData?['first_name'] as String? ??
+              user?.userMetadata?['name'] as String? ??
+              'User';
           _userEmail = user?.email ?? 'No email';
           _isEmailVerified = authService.isEmailVerified;
           _profileCompletion = _calculateProfileCompletion(userData);
@@ -57,16 +62,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   double _calculateProfileCompletion(Map<String, dynamic>? userData) {
     if (userData == null) return 0.0;
-    
+
     int completed = 0;
     int total = 5;
-    
-    if (userData['first_name'] != null && (userData['first_name'] as String).isNotEmpty) completed++;
-    if (userData['username'] != null && (userData['username'] as String).isNotEmpty) completed++;
-    if (userData['last_period_start'] != null) completed++;
-    if (_isEmailVerified) completed++;
-    if (userData['date_of_birth'] != null) completed++;
-    
+
+    if (userData['first_name'] != null &&
+        (userData['first_name'] as String).isNotEmpty) {
+      completed++;
+    }
+    if (userData['username'] != null &&
+        (userData['username'] as String).isNotEmpty) {
+      completed++;
+    }
+    if (userData['last_period_start'] != null) {
+      completed++;
+    }
+    if (_isEmailVerified) {
+      completed++;
+    }
+    if (userData['date_of_birth'] != null) {
+      completed++;
+    }
+
     return completed / total;
   }
 
@@ -124,13 +141,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         strokeWidth: 3,
                         backgroundColor: Colors.grey.withValues(alpha: 0.2),
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          _profileCompletion >= 1.0 ? Colors.green : AppColors.primary,
+                          _profileCompletion >= 1.0
+                              ? Colors.green
+                              : AppColors.primary,
                         ),
                       ),
                     ),
                     Text(
                       '${(_profileCompletion * 100).toInt()}%',
-                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -160,278 +182,302 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
                   children: [
-            // Profile Header
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(context.responsive.spacingLg),
-              decoration: BoxDecoration(gradient: AppColors.primaryGradient),
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: Colors.white,
-                    child: FaIcon(
-                      FontAwesomeIcons.user,
-                      size: context.responsive.largeIconSize,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  SizedBox(height: context.responsive.spacingMd),
-                  Text(
-                    _userName,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: context.responsive.spacingSm),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        _userEmail,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.9),
-                        ),
+                    // Profile Header
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(context.responsive.spacingLg),
+                      decoration: BoxDecoration(
+                        gradient: AppColors.primaryGradient,
                       ),
-                      if (_isEmailVerified) ...[
-                        SizedBox(width: context.responsive.spacingMd),
-                        Icon(
-                          Icons.verified,
-                          color: Colors.white,
-                          size: context.responsive.smallIconSize,
+                      child: Column(
+                        children: [
+                          _buildInitialsAvatar(radius: 50),
+                          SizedBox(height: context.responsive.spacingMd),
+                          Text(
+                            _userName,
+                            style: Theme.of(context).textTheme.headlineSmall
+                                ?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          SizedBox(height: context.responsive.spacingSm),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                _userEmail,
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.9,
+                                      ),
+                                    ),
+                              ),
+                              if (_isEmailVerified) ...[
+                                SizedBox(width: context.responsive.spacingMd),
+                                Icon(
+                                  Icons.verified,
+                                  color: Colors.white,
+                                  size: context.responsive.smallIconSize,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // PROFILE Section
+                    _buildSection(
+                      context,
+                      title: 'PROFILE',
+                      sectionColor: const Color(0xFFFF6F61), // Coral
+                      items: [
+                        _buildListTile(
+                          context,
+                          icon: FontAwesomeIcons.user,
+                          iconColor: const Color(0xFFFF6F61),
+                          title: 'Edit Profile',
+                          subtitle: _profileCompletion >= 1.0
+                              ? 'Make it yours'
+                              : 'Complete your profile',
+                          showBadge: _profileCompletion < 1.0,
+                          onTap: () async {
+                            final result = await Navigator.of(
+                              context,
+                            ).pushNamed(AppRoutes.editProfile);
+                            if (result == true && context.mounted) {
+                              await _loadUserData();
+                            }
+                          },
+                        ),
+                        _buildListTile(
+                          context,
+                          icon: FontAwesomeIcons.envelope,
+                          iconColor: const Color(0xFFFF6F61),
+                          title: 'Email Verification',
+                          subtitle: _isEmailVerified
+                              ? 'Verified'
+                              : 'Almost there - verify to unlock features',
+                          showBadge: !_isEmailVerified,
+                          onTap: () {
+                            if (!_isEmailVerified) {
+                              _showVerificationOptions(context);
+                            }
+                          },
+                        ),
+                        _buildListTile(
+                          context,
+                          icon: FontAwesomeIcons.lock,
+                          iconColor: const Color(0xFFFF6F61),
+                          title: 'Change Password',
+                          subtitle: 'Keep your account secure',
+                          onTap: () {
+                            Navigator.of(
+                              context,
+                            ).pushNamed(AppRoutes.changePassword);
+                          },
                         ),
                       ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // PROFILE Section
-            _buildSection(
-              context,
-              title: 'PROFILE',
-              sectionColor: const Color(0xFFFF6F61), // Coral
-              items: [
-                _buildListTile(
-                  context,
-                  icon: FontAwesomeIcons.user,
-                  iconColor: const Color(0xFFFF6F61),
-                  title: 'Edit Profile',
-                  subtitle: _profileCompletion >= 1.0 ? 'Make it yours' : 'Complete your profile',
-                  showBadge: _profileCompletion < 1.0,
-                  onTap: () async {
-                    final result = await Navigator.of(context).pushNamed(AppRoutes.editProfile);
-                    if (result == true && context.mounted) {
-                      await _loadUserData();
-                    }
-                  },
-                ),
-                _buildListTile(
-                  context,
-                  icon: FontAwesomeIcons.envelope,
-                  iconColor: const Color(0xFFFF6F61),
-                  title: 'Email Verification',
-                  subtitle: _isEmailVerified ? 'Verified' : 'Almost there - verify to unlock features',
-                  showBadge: !_isEmailVerified,
-                  onTap: () {
-                    if (!_isEmailVerified) {
-                      _showVerificationOptions(context);
-                    }
-                  },
-                ),
-                _buildListTile(
-                  context,
-                  icon: FontAwesomeIcons.lock,
-                  iconColor: const Color(0xFFFF6F61),
-                  title: 'Change Password',
-                  subtitle: 'Keep your account secure',
-                  onTap: () {
-                    Navigator.of(context).pushNamed(AppRoutes.changePassword);
-                  },
-                ),
-              ],
-            ),
-
-            // YOUR WELLNESS Section
-            _buildSection(
-              context,
-              title: 'YOUR WELLNESS',
-              sectionColor: const Color(0xFF26A69A), // Teal
-              items: [
-                _buildListTile(
-                  context,
-                  icon: FontAwesomeIcons.calendar,
-                  iconColor: const Color(0xFF26A69A),
-                  title: 'Cycle Settings',
-                  subtitle: 'Fine-tune your insights',
-                  onTap: () {
-                    Navigator.of(context).pushNamed(AppRoutes.cycleSettings);
-                  },
-                ),
-                _buildListTile(
-                  context,
-                  icon: FontAwesomeIcons.download,
-                  iconColor: const Color(0xFF26A69A),
-                  title: 'Export Data',
-                  subtitle: 'Download your wellness journey',
-                  onTap: () {
-                    _showExportDataDialog(context);
-                  },
-                ),
-              ],
-            ),
-
-            // App Preferences Section
-            _buildSection(
-              context,
-              title: 'PREFERENCES',
-              sectionColor: const Color(0xFF5C6BC0),
-              items: [
-                _buildListTile(
-                  context,
-                  icon: FontAwesomeIcons.bell,
-                  iconColor: const Color(0xFF5C6BC0),
-                  title: 'Notifications',
-                  subtitle: 'Stay in the loop, your way',
-                  onTap: () {
-                    Navigator.of(context).pushNamed(AppRoutes.notificationsSettings);
-                  },
-                ),
-                _buildListTile(
-                  context,
-                  icon: FontAwesomeIcons.palette,
-                  iconColor: const Color(0xFF5C6BC0),
-                  title: 'Appearance',
-                  subtitle: 'Choose your theme',
-                  onTap: () {
-                    _showAppearanceDialog(context);
-                  },
-                ),
-              ],
-            ),
-
-            // Privacy & Security Section
-            _buildSection(
-              context,
-              title: 'PRIVACY & SECURITY',
-              sectionColor: const Color(0xFFE91E63), // Pink
-              items: [
-                _buildListTile(
-                  context,
-                  icon: FontAwesomeIcons.lock,
-                  iconColor: const Color(0xFFE91E63),
-                  title: 'App PIN Lock',
-                  subtitle: 'Protect your data with a PIN',
-                  onTap: () => _showPinSettings(context),
-                ),
-                _buildListTile(
-                  context,
-                  icon: FontAwesomeIcons.shield,
-                  iconColor: const Color(0xFFE91E63),
-                  title: 'Privacy Settings',
-                  subtitle: 'Control who sees what',
-                  onTap: () {
-                    FeedbackService.showInfo(context, 'Privacy settings coming soon');
-                  },
-                ),
-              ],
-            ),
-
-            // Support & Legal Section
-            _buildSection(
-              context,
-              title: 'SUPPORT & LEGAL',
-              sectionColor: const Color(0xFF9C27B0),
-              items: [
-                _buildListTile(
-                  context,
-                  icon: FontAwesomeIcons.shield,
-                  iconColor: const Color(0xFF9C27B0),
-                  title: 'Privacy Policy',
-                  subtitle: 'Your data is private and secure',
-                  onTap: () {
-                    FeedbackService.showInfo(context, 'Privacy Policy: https://lovely.app/privacy');
-                  },
-                ),
-                _buildListTile(
-                  context,
-                  icon: FontAwesomeIcons.fileContract,
-                  iconColor: const Color(0xFF9C27B0),
-                  title: 'Terms of Service',
-                  subtitle: 'Know your rights',
-                  onTap: () {
-                    FeedbackService.showInfo(context, 'Terms: https://lovely.app/terms');
-                  },
-                ),
-                _buildListTile(
-                  context,
-                  icon: FontAwesomeIcons.heart,
-                  iconColor: const Color(0xFF9C27B0),
-                  title: 'Rate Us',
-                  subtitle: 'Help us grow and improve',
-                  onTap: () {
-                    FeedbackService.showInfo(context, 'Rate us on App Store coming soon');
-                  },
-                ),
-                _buildListTile(
-                  context,
-                  icon: FontAwesomeIcons.circleInfo,
-                  iconColor: const Color(0xFF9C27B0),
-                  title: 'About Lovely',
-                  subtitle: 'Version 1.0.0',
-                  onTap: () {
-                    _showAboutDialog(context);
-                  },
-                ),
-              ],
-            ),
-
-            // ACCOUNT ACTIONS Section
-            _buildSection(
-              context,
-              title: 'ACCOUNT ACTIONS',
-              sectionColor: AppColors.error,
-              items: [
-                _buildListTile(
-                  context,
-                  icon: FontAwesomeIcons.trashCan,
-                  iconColor: AppColors.error,
-                  title: 'Delete Account',
-                  subtitle: 'We\'ll miss you - this can\'t be undone',
-                  titleColor: AppColors.error,
-                  onTap: () {
-                    _showDeleteAccountDialog(context);
-                  },
-                ),
-              ],
-            ),
-
-            // Sign Out Button
-            Padding(
-              padding: EdgeInsets.all(context.responsive.spacingLg),
-              child: SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () => _handleSignOut(context),
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(
-                      vertical: context.responsive.spacingMd,
                     ),
-                    side: BorderSide(color: Theme.of(context).colorScheme.outline),
-                  ),
-                  icon: const FaIcon(FontAwesomeIcons.rightFromBracket),
-                  label: const Text('Sign Out'),
+
+                    // YOUR WELLNESS Section
+                    _buildSection(
+                      context,
+                      title: 'YOUR WELLNESS',
+                      sectionColor: const Color(0xFF26A69A), // Teal
+                      items: [
+                        _buildListTile(
+                          context,
+                          icon: FontAwesomeIcons.calendar,
+                          iconColor: const Color(0xFF26A69A),
+                          title: 'Cycle Settings',
+                          subtitle: 'Fine-tune your insights',
+                          onTap: () {
+                            Navigator.of(
+                              context,
+                            ).pushNamed(AppRoutes.cycleSettings);
+                          },
+                        ),
+                        _buildListTile(
+                          context,
+                          icon: FontAwesomeIcons.download,
+                          iconColor: const Color(0xFF26A69A),
+                          title: 'Export Data',
+                          subtitle: 'Download your wellness journey',
+                          onTap: () {
+                            _showExportDataDialog(context);
+                          },
+                        ),
+                      ],
+                    ),
+
+                    // App Preferences Section
+                    _buildSection(
+                      context,
+                      title: 'PREFERENCES',
+                      sectionColor: const Color(0xFF5C6BC0),
+                      items: [
+                        _buildListTile(
+                          context,
+                          icon: FontAwesomeIcons.bell,
+                          iconColor: const Color(0xFF5C6BC0),
+                          title: 'Notifications',
+                          subtitle: 'Stay in the loop, your way',
+                          onTap: () {
+                            Navigator.of(
+                              context,
+                            ).pushNamed(AppRoutes.notificationsSettings);
+                          },
+                        ),
+                        _buildListTile(
+                          context,
+                          icon: FontAwesomeIcons.palette,
+                          iconColor: const Color(0xFF5C6BC0),
+                          title: 'Appearance',
+                          subtitle: 'Choose your theme',
+                          onTap: () {
+                            _showAppearanceDialog(context);
+                          },
+                        ),
+                      ],
+                    ),
+
+                    // Privacy & Security Section
+                    _buildSection(
+                      context,
+                      title: 'PRIVACY & SECURITY',
+                      sectionColor: const Color(0xFFE91E63), // Pink
+                      items: [
+                        _buildListTile(
+                          context,
+                          icon: FontAwesomeIcons.lock,
+                          iconColor: const Color(0xFFE91E63),
+                          title: 'App PIN Lock',
+                          subtitle: 'Protect your data with a PIN',
+                          onTap: () => _showPinSettings(context),
+                        ),
+                        _buildListTile(
+                          context,
+                          icon: FontAwesomeIcons.shield,
+                          iconColor: const Color(0xFFE91E63),
+                          title: 'Privacy Settings',
+                          subtitle: 'Coming in Phase 2',
+                          onTap: () {
+                            FeedbackService.showInfo(
+                              context,
+                              'Privacy settings will be available in Phase 2',
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+
+                    // Support & Legal Section
+                    _buildSection(
+                      context,
+                      title: 'SUPPORT & LEGAL',
+                      sectionColor: const Color(0xFF9C27B0),
+                      items: [
+                        _buildListTile(
+                          context,
+                          icon: FontAwesomeIcons.shield,
+                          iconColor: const Color(0xFF9C27B0),
+                          title: 'Privacy Policy',
+                          subtitle: 'Your data is private and secure',
+                          onTap: () {
+                            FeedbackService.showInfo(
+                              context,
+                              'Privacy Policy: https://lovely.app/privacy',
+                            );
+                          },
+                        ),
+                        _buildListTile(
+                          context,
+                          icon: FontAwesomeIcons.fileContract,
+                          iconColor: const Color(0xFF9C27B0),
+                          title: 'Terms of Service',
+                          subtitle: 'Know your rights',
+                          onTap: () {
+                            FeedbackService.showInfo(
+                              context,
+                              'Terms: https://lovely.app/terms',
+                            );
+                          },
+                        ),
+                        _buildListTile(
+                          context,
+                          icon: FontAwesomeIcons.heart,
+                          iconColor: const Color(0xFF9C27B0),
+                          title: 'Rate Us',
+                          subtitle: 'Coming in Phase 2',
+                          onTap: () {
+                            FeedbackService.showInfo(
+                              context,
+                              'App Store rating will be available in Phase 2',
+                            );
+                          },
+                        ),
+                        _buildListTile(
+                          context,
+                          icon: FontAwesomeIcons.circleInfo,
+                          iconColor: const Color(0xFF9C27B0),
+                          title: 'About Lovely',
+                          subtitle: 'Version 1.0.0',
+                          onTap: () {
+                            _showAboutDialog(context);
+                          },
+                        ),
+                      ],
+                    ),
+
+                    // ACCOUNT ACTIONS Section
+                    _buildSection(
+                      context,
+                      title: 'ACCOUNT ACTIONS',
+                      sectionColor: AppColors.error,
+                      items: [
+                        _buildListTile(
+                          context,
+                          icon: FontAwesomeIcons.trashCan,
+                          iconColor: AppColors.error,
+                          title: 'Delete Account',
+                          subtitle: 'We\'ll miss you - this can\'t be undone',
+                          titleColor: AppColors.error,
+                          onTap: () {
+                            _showDeleteAccountDialog(context);
+                          },
+                        ),
+                      ],
+                    ),
+
+                    // Sign Out Button
+                    Padding(
+                      padding: EdgeInsets.all(context.responsive.spacingLg),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () => _handleSignOut(context),
+                          style: OutlinedButton.styleFrom(
+                            padding: EdgeInsets.symmetric(
+                              vertical: context.responsive.spacingMd,
+                            ),
+                            side: BorderSide(
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                          ),
+                          icon: const FaIcon(FontAwesomeIcons.rightFromBracket),
+                          label: const Text('Sign Out'),
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: context.responsive.spacingLg),
+                  ],
                 ),
               ),
             ),
-
-            SizedBox(height: context.responsive.spacingLg),
-          ],
-        ),
-              ),
-      ),
     );
   }
 
@@ -452,7 +498,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: sectionColor.withValues(alpha: 0.3), width: 2),
+          side: BorderSide(
+            color: sectionColor.withValues(alpha: 0.3),
+            width: 2,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -506,8 +555,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     bool showBadge = false,
     required VoidCallback onTap,
   }) {
-    final effectiveIconColor = iconColor ?? titleColor ?? Theme.of(context).iconTheme.color;
-    
+    final effectiveIconColor =
+        iconColor ?? titleColor ?? Theme.of(context).iconTheme.color;
+
     return ListTile(
       leading: Container(
         width: 40,
@@ -516,13 +566,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           color: effectiveIconColor?.withValues(alpha: 0.12),
           shape: BoxShape.circle,
         ),
-        child: Center(
-          child: FaIcon(
-            icon,
-            size: 20,
-            color: effectiveIconColor,
-          ),
-        ),
+        child: Center(child: FaIcon(icon, size: 20, color: effectiveIconColor)),
       ),
       title: Row(
         children: [
@@ -538,7 +582,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               decoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.3),
+                ),
               ),
               child: Text(
                 '!',
@@ -552,7 +598,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ],
       ),
       subtitle: subtitle != null ? Text(subtitle) : null,
-      trailing: trailing ?? Icon(Icons.chevron_right, color: Colors.grey.shade400),
+      trailing:
+          trailing ?? Icon(Icons.chevron_right, color: Colors.grey.shade400),
       onTap: onTap,
     );
   }
@@ -623,9 +670,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           children: [
             Text(
               'App PIN Lock',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             Text(
@@ -635,7 +682,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 24),
-            
+
             if (hasPin && isEnabled) ...[
               // Change PIN
               SizedBox(
@@ -672,7 +719,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: FilledButton.icon(
                   onPressed: () async {
                     Navigator.pop(context);
-                    final result = await Navigator.of(context).pushNamed(AppRoutes.pinSetup);
+                    final result = await Navigator.of(
+                      context,
+                    ).pushNamed(AppRoutes.pinSetup);
                     if (result == true && mounted) {
                       ref.read(pinLockProvider.notifier).refresh();
                     }
@@ -689,8 +738,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _changePin(BuildContext context) async {
-    // Show change PIN dialog
-    FeedbackService.showInfo(context, 'Change PIN coming soon');
+    final result = await Navigator.of(
+      context,
+    ).pushNamed(AppRoutes.pinSetup, arguments: {'isChangeMode': true});
+    if (result == true && mounted) {
+      ref.read(pinLockProvider.notifier).refresh();
+    }
   }
 
   Future<void> _disablePin(BuildContext context) async {
@@ -699,7 +752,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Disable PIN Lock?'),
         content: const Text(
-          'Your app will no longer be protected by a PIN. Anyone with access to your device can view your wellness data.',
+          'For your security, please enter your current PIN to disable protection.',
         ),
         actions: [
           TextButton(
@@ -709,22 +762,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('Disable'),
+            child: const Text('Continue'),
           ),
         ],
       ),
     );
 
     if (confirmed == true && context.mounted) {
-      try {
-        await PinService().removePin();
-        ref.read(pinLockProvider.notifier).disablePin();
-        if (context.mounted) {
-          FeedbackService.showSuccess(context, 'PIN lock disabled');
-        }
-      } catch (e) {
-        if (context.mounted) {
-          FeedbackService.showError(context, e);
+      // Show PIN entry to verify before disabling
+      final verified = await Navigator.of(
+        context,
+      ).pushNamed(AppRoutes.pinUnlock);
+
+      if (verified == true && mounted) {
+        try {
+          await PinService().removePin();
+          await ref.read(pinLockProvider.notifier).refresh();
+          if (mounted) {
+            FeedbackService.showSuccess(context, 'PIN lock disabled');
+          }
+        } catch (e) {
+          if (mounted) {
+            FeedbackService.showError(context, e);
+          }
         }
       }
     }
@@ -765,8 +825,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-
-
   void _showAppearanceDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -776,10 +834,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Theme',
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
+            Text('Theme', style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 12),
             RadioGroup<int>(
               groupValue: 1,
@@ -833,26 +888,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Export Data'),
-        content: Column(
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Download your personal data including:'),
-            const SizedBox(height: 12),
-            const Padding(
+            Text('Download your personal data including:'),
+            SizedBox(height: 12),
+            Padding(
               padding: EdgeInsets.only(left: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('• Period tracking data'),
-                  Text('• Mood & symptom logs'),
-                  Text('• Activity records'),
-                  Text('• Notes & journal entries'),
+                  Text('• Flow intensity logs'),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-            const Text(
+            SizedBox(height: 16),
+            Text(
               'Your data will be exported as a CSV file.',
               style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
             ),
@@ -864,9 +917,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: const Text('Cancel'),
           ),
           FilledButton.icon(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              FeedbackService.showInfo(context, 'Data export starting...');
+              FeedbackService.showInfo(context, 'Preparing your data...');
+              try {
+                final periods = await ref
+                    .read(periodServiceProvider)
+                    .getPeriods(limit: 1000);
+                await ExportService().exportPeriodsToCSV(periods);
+                if (context.mounted) {
+                  FeedbackService.showSuccess(context, 'Export complete!');
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  FeedbackService.showError(context, e);
+                }
+              }
             },
             icon: const FaIcon(FontAwesomeIcons.download),
             label: const Text('Export CSV'),
@@ -897,10 +963,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               style: TextStyle(fontStyle: FontStyle.italic),
             ),
             const SizedBox(height: 16),
-            Text(
-              'Features:',
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
+            Text('Features:', style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 8),
             const Padding(
               padding: EdgeInsets.only(left: 16),
@@ -908,9 +971,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Period & cycle tracking'),
-                Text('Mood & symptom logging'),
-                Text('Activity tracking'),
-                Text('Daily insights'),
+                  Text('Mood & symptom logging'),
+                  Text('Activity tracking'),
+                  Text('Daily insights'),
                 ],
               ),
             ),
@@ -957,14 +1020,42 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (!context.mounted) return;
       Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
     } catch (e) {
-      // Close progress dialog if still open
       if (context.mounted && Navigator.of(context).canPop()) {
         Navigator.pop(context);
       }
-
       if (context.mounted) {
         FeedbackService.showError(context, e);
       }
     }
+  }
+
+  Widget _buildInitialsAvatar({
+    required double radius,
+    Color? backgroundColor,
+  }) {
+    String initials = '';
+    if (_userName.isNotEmpty) {
+      final parts = _userName.trim().split(RegExp(r'\s+'));
+      if (parts.length >= 2) {
+        initials = (parts[0][0] + parts[1][0]).toUpperCase();
+      } else if (parts.isNotEmpty && parts[0].isNotEmpty) {
+        initials = parts[0][0].toUpperCase();
+      }
+    }
+
+    if (initials.isEmpty) initials = 'U';
+
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: backgroundColor ?? Colors.white,
+      child: Text(
+        initials,
+        style: TextStyle(
+          fontSize: radius * 0.8,
+          fontWeight: FontWeight.bold,
+          color: backgroundColor == null ? AppColors.primary : Colors.white,
+        ),
+      ),
+    );
   }
 }

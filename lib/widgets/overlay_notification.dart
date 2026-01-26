@@ -16,6 +16,14 @@ class OverlayNotification {
     // Remove existing notification
     _currentOverlay?.remove();
 
+    final overlayState = Overlay.maybeOf(context);
+    if (overlayState == null) {
+      debugPrint(
+        'Warning: Could not show OverlayNotification because no Overlay was found in the context.',
+      );
+      return;
+    }
+
     _currentOverlay = OverlayEntry(
       builder: (context) => _NotificationWidget(
         message: message,
@@ -28,14 +36,16 @@ class OverlayNotification {
       ),
     );
 
-    Overlay.of(context).insert(_currentOverlay!);
+    overlayState.insert(_currentOverlay!);
 
     // Auto-dismiss (skip scheduling timers when running unit/widget tests)
     final bool isRunningTests = Platform.environment['FLUTTER_TEST'] == 'true';
     if (!isRunningTests) {
       Future.delayed(duration, () {
-        _currentOverlay?.remove();
-        _currentOverlay = null;
+        if (_currentOverlay != null && _currentOverlay!.mounted) {
+          _currentOverlay?.remove();
+          _currentOverlay = null;
+        }
       });
     }
   }

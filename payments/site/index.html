@@ -1,0 +1,111 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Lovely — Subscribe</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+      body { font-family: Inter, system-ui, Arial; max-width: 720px; margin: 40px auto; padding: 0 16px; }
+      .card { border: 1px solid #eee; padding: 16px; border-radius: 8px; margin-bottom: 12px }
+      .actions { display:flex; gap:8px }
+      .small { font-size: 14px; color: #666 }
+      .hidden { display:none }
+    </style>
+  </head>
+  <body>
+    <h1>Lovely — Subscribe</h1>
+
+    <div id="auth" class="card">
+      <div id="signed-out">
+        <p>Sign in with email to start</p>
+        <input id="email" placeholder="you@example.com" />
+        <button id="sign-in">Sign in / Send magic link</button>
+      </div>
+      <div id="signed-in" class="hidden">
+        <p>Signed in as <span id="user-email"></span></p>
+        <button id="sign-out">Sign out</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Plans</h3>
+      <div class="actions">
+        <button id="monthly">Subscribe Monthly ($3)</button>
+        <button id="annual">Subscribe Annual ($30)</button>
+      </div>
+      <p class="small">After payment, sign in to the Lovely app to restore your premium access.</p>
+    </div>
+
+    <div id="status" class="card hidden"></div>
+
+    <script>
+      // Configure these in your hosting environment
+      const SUPABASE_URL = 'REPLACE_WITH_SUPABASE_URL';
+      const SUPABASE_ANON_KEY = 'REPLACE_WITH_SUPABASE_ANON_KEY';
+
+      const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      const signInBtn = document.getElementById('sign-in');
+      const signOutBtn = document.getElementById('sign-out');
+      const emailInput = document.getElementById('email');
+      const signedInDiv = document.getElementById('signed-in');
+      const signedOutDiv = document.getElementById('signed-out');
+      const userEmailSpan = document.getElementById('user-email');
+      const statusDiv = document.getElementById('status');
+
+      async function updateUi() {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          signedInDiv.classList.remove('hidden');
+          signedOutDiv.classList.add('hidden');
+          userEmailSpan.textContent = user.email || '(no email)';
+        } else {
+          signedInDiv.classList.add('hidden');
+          signedOutDiv.classList.remove('hidden');
+        }
+      }
+
+      signInBtn.addEventListener('click', async () => {
+        const email = emailInput.value.trim();
+        if (!email) return alert('Enter email');
+        const { error } = await supabase.auth.signInWithOtp({ email });
+        if (error) return alert('Sign-in error: ' + error.message);
+        alert('Magic link sent to your email. Use it to sign in.');
+      });
+
+      signOutBtn.addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        updateUi();
+      });
+
+      async function initiate(amount, product) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return alert('Sign in first');
+
+        const resp = await fetch('/initiate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount, email: user.email, user_id: user.id, product }),
+        });
+        const json = await resp.json();
+        if (json.authorization_url) {
+          window.location.href = json.authorization_url;
+        } else {
+          statusDiv.classList.remove('hidden');
+          statusDiv.textContent = 'Payment init failed: ' + JSON.stringify(json);
+        }
+      }
+
+      document.getElementById('monthly').addEventListener('click', () => initiate(3.00, 'monthly_3'));
+      document.getElementById('annual').addEventListener('click', () => initiate(30.00, 'annual_30'));
+
+      // Listen for auth state changes
+      supabase.auth.onAuthStateChange((_event, session) => {
+        updateUi();
+      });
+
+      updateUi();
+    </script>
+  </body>
+</html>

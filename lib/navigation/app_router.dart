@@ -14,6 +14,8 @@ import 'package:lovely/screens/settings/notifications_settings_screen.dart';
 import 'package:lovely/screens/settings/cycle_settings_screen.dart';
 import 'package:lovely/screens/security/pin_setup_screen.dart';
 import 'package:lovely/screens/security/pin_unlock_screen.dart';
+import 'package:lovely/screens/analytics/analytics_screen.dart';
+import 'package:lovely/screens/analytics/cycle_history_screen.dart';
 
 /// Centralized route names used across the app.
 abstract class AppRoutes {
@@ -32,6 +34,8 @@ abstract class AppRoutes {
   static const String cycleSettings = '/settings/cycle';
   static const String pinSetup = '/security/pin-setup';
   static const String pinUnlock = '/pin-unlock';
+  static const String analytics = '/analytics';
+  static const String cycleHistory = '/cycle-history';
 }
 
 /// Simple centralized router using named routes. Keeps navigation
@@ -53,19 +57,29 @@ class AppRouter {
         final args = settings.arguments as Map<String, dynamic>?;
         final date = args?['selectedDate'] as DateTime?;
         if (date == null) {
-          return MaterialPageRoute(builder: (_) => DailyLogScreenV2(selectedDate: DateTime.now()));
+          return MaterialPageRoute(
+            builder: (_) => DailyLogScreenV2(selectedDate: DateTime.now()),
+          );
         }
-        return MaterialPageRoute(builder: (_) => DailyLogScreenV2(selectedDate: date));
+        return MaterialPageRoute(
+          builder: (_) => DailyLogScreenV2(selectedDate: date),
+        );
       case AppRoutes.editProfile:
         return MaterialPageRoute(builder: (_) => const EditProfileScreen());
       case AppRoutes.changePassword:
         return MaterialPageRoute(builder: (_) => const ChangePasswordScreen());
       case AppRoutes.notificationsSettings:
-        return MaterialPageRoute(builder: (_) => const NotificationsSettingsScreen());
+        return MaterialPageRoute(
+          builder: (_) => const NotificationsSettingsScreen(),
+        );
       case AppRoutes.cycleSettings:
         return MaterialPageRoute(builder: (_) => const CycleSettingsScreen());
       case AppRoutes.pinSetup:
-        return MaterialPageRoute(builder: (_) => const PinSetupScreen());
+        final args = settings.arguments as Map<String, dynamic>?;
+        final isChangeMode = args?['isChangeMode'] as bool? ?? false;
+        return MaterialPageRoute(
+          builder: (_) => PinSetupScreen(isChangeMode: isChangeMode),
+        );
       case AppRoutes.onboarding:
         return MaterialPageRoute(builder: (_) => const OnboardingScreen());
       case AppRoutes.forgotPassword:
@@ -75,23 +89,36 @@ class AppRouter {
       case AppRoutes.pinUnlock:
         final args = settings.arguments as Map<String, dynamic>?;
         return MaterialPageRoute(
-          builder: (ctx) => PinUnlockScreen(
-            onUnlocked: args?['onUnlocked'] as VoidCallback?,
-          ),
+          builder: (ctx) =>
+              PinUnlockScreen(onUnlocked: args?['onUnlocked'] as VoidCallback?),
           fullscreenDialog: true,
         );
+      case AppRoutes.analytics:
+        return MaterialPageRoute(builder: (_) => const AnalyticsScreen());
+      case AppRoutes.cycleHistory:
+        return MaterialPageRoute(builder: (_) => const CycleHistoryScreen());
       default:
         return null;
     }
   }
 
   // Convenience helpers
-  static Future<T?> pushNamed<T>(BuildContext context, String name, {Object? arguments}) {
+  static Future<T?> pushNamed<T>(
+    BuildContext context,
+    String name, {
+    Object? arguments,
+  }) {
     return Navigator.of(context).pushNamed<T>(name, arguments: arguments);
   }
 
-  static Future<T?> pushReplacementNamed<T, U>(BuildContext context, String name, {Object? arguments}) {
-    return Navigator.of(context).pushReplacementNamed<T, U>(name, arguments: arguments);
+  static Future<T?> pushReplacementNamed<T, U>(
+    BuildContext context,
+    String name, {
+    Object? arguments,
+  }) {
+    return Navigator.of(
+      context,
+    ).pushReplacementNamed<T, U>(name, arguments: arguments);
   }
 
   static void pop(BuildContext context, [Object? result]) {

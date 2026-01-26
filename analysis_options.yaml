@@ -30,3 +30,5 @@ linter:
 analyzer:
   exclude:
     - lib/screens/auth/_archived/**
+    - lib/providers/entitlements_provider.dart
+    - lib/providers/entitlements_provider_new.dart

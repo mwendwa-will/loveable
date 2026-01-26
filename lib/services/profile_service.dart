@@ -1,19 +1,32 @@
 import 'package:lovely/services/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:lovely/repositories/user_repository.dart';
 
 /// Wrapper for user/profile related data access
 class ProfileService {
   static final ProfileService _instance = ProfileService._internal();
   factory ProfileService({SupabaseService? supabase}) => _instance;
-  ProfileService._internal({SupabaseService? supabase}) : _supabase = supabase ?? SupabaseService();
 
-  final SupabaseService _supabase;
+  late final UserRepository _repository;
 
-  Future<Map<String, dynamic>?> getUserData() => _supabase.getUserData();
+  ProfileService._internal({SupabaseService? supabase}) {
+    _repository = UserRepository((supabase ?? SupabaseService()).client);
+  }
 
-  User? get currentUser => _supabase.currentUser;
+  Future<Map<String, dynamic>?> getUserData() => _repository.getUserData();
 
-  Future<bool> hasCompletedOnboarding() => _supabase.hasCompletedOnboarding();
+  User? get currentUser => Supabase
+      .instance
+      .client
+      .auth
+      .currentUser; // Accessed directly or via repo helper if available
+
+  Future<bool> hasCompletedOnboarding() async {
+    final data = await getUserData();
+    // Simplify check or move logic to repo. Keeping logic here using repo data.
+    if (data == null) return false;
+    return data['first_name'] != null || data['username'] != null;
+  }
 
   Future<void> updateUserProfile({
     String? firstName,
@@ -21,15 +34,16 @@ class ProfileService {
     String? username,
     String? bio,
     DateTime? dateOfBirth,
-  }) => _supabase.updateUserProfile(
-        firstName: firstName,
-        lastName: lastName,
-        username: username,
-        bio: bio,
-        dateOfBirth: dateOfBirth,
-      );
+  }) => _repository.updateUserProfileFull(
+    firstName: firstName,
+    lastName: lastName,
+    username: username,
+    bio: bio,
+    dateOfBirth: dateOfBirth,
+  );
 
-  Future<void> updateUserData(Map<String, dynamic> updates) => _supabase.updateUserData(updates);
+  Future<void> updateUserData(Map<String, dynamic> updates) =>
+      _repository.updateUserData(updates);
 
   Future<void> saveUserData({
     String? firstName,
@@ -40,23 +54,30 @@ class ProfileService {
     int? averagePeriodLength,
     DateTime? lastPeriodStart,
     bool? notificationsEnabled,
-  }) => _supabase.saveUserData(
-        firstName: firstName,
-        lastName: lastName,
-        username: username,
-        dateOfBirth: dateOfBirth,
-        averageCycleLength: averageCycleLength,
-        averagePeriodLength: averagePeriodLength,
-        lastPeriodStart: lastPeriodStart,
-        notificationsEnabled: notificationsEnabled,
-      );
+  }) => _repository.saveUserData(
+    firstName: firstName,
+    lastName: lastName,
+    username: username,
+    dateOfBirth: dateOfBirth,
+    averageCycleLength: averageCycleLength,
+    averagePeriodLength: averagePeriodLength,
+    lastPeriodStart: lastPeriodStart,
+    notificationsEnabled: notificationsEnabled,
+  );
 
-  Future<bool> isUsernameAvailable(String username) => _supabase.isUsernameAvailable(username);
+  Future<bool> isUsernameAvailable(String username) =>
+      _repository.isUsernameAvailable(username);
 
-  Future<Map<String, dynamic>?> getPregnancyInfo() => _supabase.getPregnancyInfo();
+  Future<Map<String, dynamic>?> getPregnancyInfo() =>
+      _repository.getPregnancyInfo();
 
-  Future<void> enablePregnancyMode({required DateTime conceptionDate, required DateTime dueDate}) =>
-      _supabase.enablePregnancyMode(conceptionDate: conceptionDate, dueDate: dueDate);
+  Future<void> enablePregnancyMode({
+    required DateTime conceptionDate,
+    required DateTime dueDate,
+  }) => _repository.enablePregnancyMode(
+    conceptionDate: conceptionDate,
+    dueDate: dueDate,
+  );
 
-  Future<void> disablePregnancyMode() => _supabase.disablePregnancyMode();
+  Future<void> disablePregnancyMode() => _repository.disablePregnancyMode();
 }

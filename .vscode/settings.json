@@ -1,11 +1,7 @@
 {
     "sqltools.connections": [
         {
-            "pgOptions": {
-                "ssl": {
-                    "rejectUnauthorized": false
-                }
-            },
+            "pgOptions": { "ssl": { "rejectUnauthorized": false } },
             "ssh": "Disabled",
             "previewLimit": 50,
             "server": "aws-1-eu-central-1.pooler.supabase.com",
@@ -15,5 +11,14 @@
             "database": "postgres",
             "username": "postgres.kzscdhegefjvymjvmlaa"
         }
-    ]
+    ],
+    "files.associations": {
+        "*.ts": "typescript",
+        "*.tsx": "typescriptreact",
+        "*.js": "javascript",
+        "*.jsx": "javascriptreact"
+    },
+    "javascript.validate.enable": true,
+    "typescript.tsdk": "node_modules/typescript/lib",
+    "editor.formatOnSave": false
 }

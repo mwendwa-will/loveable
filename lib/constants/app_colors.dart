@@ -11,6 +11,10 @@ class AppColors {
   static const Color primary = Color(0xFFFF6F61);
   static const Color primaryLight = Color(0xFFFF8E7E);
   static const Color primarySoft = Color(0xFFFFB5A7);
+  static const Color secondary = Color(0xFF757575); // Grey 600
+
+  // Text Colors
+  static const Color textSecondary = Color(0xFF757575);
 
   // Cycle Phase Colors
   static const Color menstrualPhase = Color(0xFFFF6F61);
@@ -176,8 +180,10 @@ class AppColors {
   static Color getFollicularPhaseColor(BuildContext context) {
     return getAdaptiveColor(
       context,
-      lightColor: const Color(0xFFB2DFDB), // Soft teal
-      darkColor: const Color(0xFF00695C), // Deep teal
+      lightColor: const Color(
+        0xFF00897B,
+      ), // Darker teal for light mode contrast
+      darkColor: const Color(0xFF4DB6AC), // Lighter teal for dark mode contrast
     );
   }
 
@@ -225,7 +231,7 @@ class AppColors {
   static Color getOvulationDayColor(BuildContext context) {
     return getAdaptiveColor(
       context,
-      lightColor: const Color(0xFFFFF9C4), // Soft yellow
+      lightColor: const Color(0xFFFBC02D), // Vibrant gold for visibility
       darkColor: const Color(0xFFF9A825), // Gold
     );
   }

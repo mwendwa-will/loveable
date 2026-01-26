@@ -3,10 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lovely/providers/period_provider.dart';
 import 'package:lovely/providers/daily_log_provider.dart';
+import 'package:lovely/providers/calendar_provider.dart';
 import 'package:lovely/models/mood.dart';
 import 'package:lovely/models/symptom.dart';
 import 'package:lovely/models/sexual_activity.dart';
 import 'package:lovely/models/period.dart';
+import 'package:lovely/models/note.dart';
 import 'package:intl/intl.dart';
 import 'package:lovely/core/feedback/feedback_service.dart';
 import 'package:lovely/constants/app_colors.dart';
@@ -30,20 +32,15 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
   @override
   void initState() {
     super.initState();
-    _loadNoteData();
     _noteController.addListener(_onNoteChanged);
   }
 
-  void _loadNoteData() {
-    ref.read(noteStreamProvider(widget.selectedDate).future).then((data) {
-      if (mounted && data != null) {
-        _noteController.text = data.content;
-        _noteSaved = true;
-      }
-    }).catchError((e) {
-      // Ignore errors from provider disposal during navigation
-      debugPrint('Note stream error (likely navigation): $e');
-    });
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Using ref.listen in build or didChangeDependencies is not ideal for one-time setup
+    // But we can listen to the provider and update the controller if it's currently empty
+    // or as a more robust solution, we use ref.listen inside the build method.
   }
 
   void _onNoteChanged() {
@@ -68,6 +65,8 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
 
     try {
       await action();
+      // Invalidate calendar provider to refresh markers on Home/Calendar
+      ref.invalidate(calendarProvider);
     } catch (e) {
       if (mounted) FeedbackService.showError(context, e);
     } finally {
@@ -77,9 +76,21 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
 
   @override
   Widget build(BuildContext context) {
-    final dateStr = DateFormat('EEE, MMM d').format(widget.selectedDate);
-    final isToday = DateUtils.isSameDay(widget.selectedDate, DateTime.now());
+    final normalizedDate = DateUtils.dateOnly(widget.selectedDate);
+    final dateStr = DateFormat('EEE, MMM d').format(normalizedDate);
+    final isToday = DateUtils.isSameDay(normalizedDate, DateTime.now());
     final colorScheme = Theme.of(context).colorScheme;
+
+    ref.listen<AsyncValue<Note?>>(noteStreamProvider(normalizedDate), (
+      prev,
+      next,
+    ) {
+      next.whenData((note) {
+        if (note != null && _noteController.text.isEmpty && _noteSaved) {
+          _noteController.text = note.content;
+        }
+      });
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -145,23 +156,31 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionHeader('Period Flow', Icons.water_drop, AppColors.getPeriodColor(context)),
+        _buildSectionHeader(
+          'Period Flow',
+          Icons.water_drop,
+          AppColors.getPeriodColor(context),
+        ),
         const SizedBox(height: 12),
         periodsAsync.when(
           data: (periods) {
             final hasPeriod = periods.isNotEmpty;
-            final currentIntensity = hasPeriod ? periods.first.flowIntensity : null;
+            final currentIntensity = hasPeriod
+                ? periods.first.flowIntensity
+                : null;
 
             return Row(
               children: [
                 _buildFlowChip(
                   label: 'None',
                   icon: Icons.close,
-                    isSelected: !hasPeriod,
-                    color: colorScheme.surfaceContainerHighest,
-                    onTap: hasPeriod
+                  isSelected: !hasPeriod,
+                  color: colorScheme.surfaceContainerHighest,
+                  onTap: hasPeriod
                       ? () => _autoSave(() async {
-                        await ref.read(periodServiceProvider).deletePeriod(periods.first.id);
+                          await ref
+                              .read(periodServiceProvider)
+                              .deletePeriod(periods.first.id);
                         })
                       : null,
                 ),
@@ -170,16 +189,26 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
                   label: 'Light',
                   icon: Icons.water_drop_outlined,
                   isSelected: currentIntensity == FlowIntensity.light,
-                  color: AppColors.getPeriodColor(context).withValues(alpha: 0.4),
-                  onTap: () => _logOrUpdatePeriod(FlowIntensity.light, periods.isNotEmpty ? periods.first : null),
+                  color: AppColors.getPeriodColor(
+                    context,
+                  ).withValues(alpha: 0.4),
+                  onTap: () => _logOrUpdatePeriod(
+                    FlowIntensity.light,
+                    periods.isNotEmpty ? periods.first : null,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 _buildFlowChip(
                   label: 'Medium',
                   icon: Icons.water_drop,
                   isSelected: currentIntensity == FlowIntensity.medium,
-                  color: AppColors.getPeriodColor(context).withValues(alpha: 0.7),
-                  onTap: () => _logOrUpdatePeriod(FlowIntensity.medium, periods.isNotEmpty ? periods.first : null),
+                  color: AppColors.getPeriodColor(
+                    context,
+                  ).withValues(alpha: 0.7),
+                  onTap: () => _logOrUpdatePeriod(
+                    FlowIntensity.medium,
+                    periods.isNotEmpty ? periods.first : null,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 _buildFlowChip(
@@ -187,13 +216,77 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
                   icon: Icons.water_drop,
                   isSelected: currentIntensity == FlowIntensity.heavy,
                   color: AppColors.getPeriodColor(context),
-                  onTap: () => _logOrUpdatePeriod(FlowIntensity.heavy, periods.isNotEmpty ? periods.first : null),
+                  onTap: () => _logOrUpdatePeriod(
+                    FlowIntensity.heavy,
+                    periods.isNotEmpty ? periods.first : null,
+                  ),
                 ),
               ],
             );
           },
           loading: () => _buildLoadingChips(4),
-          error: (_, _) => const Text('Couldn\'t load this'),
+          error: (e, _) => Text(
+            'Error: ${e.toString()}',
+            style: const TextStyle(fontSize: 10, color: Colors.grey),
+          ),
+        ),
+
+        // Period Ended Today Button
+        Consumer(
+          builder: (context, ref, child) {
+            final currentPeriodAsync = ref.watch(
+              periodsStreamProvider(
+                DateRange(
+                  startDate: widget.selectedDate.subtract(
+                    const Duration(days: 15),
+                  ),
+                  endDate: widget.selectedDate.add(const Duration(days: 1)),
+                ),
+              ),
+            );
+
+            return currentPeriodAsync.when(
+              data: (periods) {
+                // Find if there is an ongoing period that hasn't ended yet
+                final ongoingPeriod = periods
+                    .where((p) => p.endDate == null)
+                    .firstOrNull;
+
+                if (ongoingPeriod == null) return const SizedBox.shrink();
+
+                return Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: OutlinedButton.icon(
+                    onPressed: () => _autoSave(() async {
+                      await ref
+                          .read(periodServiceProvider)
+                          .endPeriod(
+                            periodId: ongoingPeriod.id,
+                            endDate: widget.selectedDate,
+                          );
+                    }),
+                    icon: const Icon(Icons.check_circle_outline, size: 18),
+                    label: const Text('Period Ended Today'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.getPeriodColor(context),
+                      side: BorderSide(
+                        color: AppColors.getPeriodColor(context),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                    ),
+                  ),
+                );
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
+            );
+          },
         ),
       ],
     );
@@ -226,7 +319,9 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
               Icon(
                 icon,
                 size: 24,
-                color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant,
+                color: isSelected
+                    ? colorScheme.onPrimaryContainer
+                    : colorScheme.onSurfaceVariant,
               ),
               const SizedBox(height: 4),
               Text(
@@ -234,7 +329,9 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                  color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant,
+                  color: isSelected
+                      ? colorScheme.onPrimaryContainer
+                      : colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
@@ -244,22 +341,46 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
     );
   }
 
-  Future<void> _logOrUpdatePeriod(FlowIntensity intensity, Period? existingPeriod) async {
+  Future<void> _logOrUpdatePeriod(
+    FlowIntensity intensity,
+    Period? existingPeriod,
+  ) async {
     await _autoSave(() async {
       final periodService = ref.read(periodServiceProvider);
-      if (existingPeriod != null) {
-        await periodService.updatePeriodIntensity(
-          periodId: existingPeriod.id,
+
+      // 1. Save daily flow intensity (specific to this date)
+      await periodService.saveDailyFlow(
+        date: widget.selectedDate,
+        intensity: intensity,
+      );
+
+      // 2. Ensure period exists (start or continue) if not already
+      if (existingPeriod == null) {
+        // Check if yesterday had a period to determine if we should extend it or start new
+        // For now, simple start logic as per current implementation
+        await periodService.startPeriod(
+          startDate: widget.selectedDate,
           intensity: intensity,
         );
       } else {
-        await periodService.startPeriod(startDate: widget.selectedDate, intensity: intensity);
+        // If period exists, we don't necessarily need to update its overall intensity
+        // unless we want to keep the 'average' or 'max' there.
+        // For now, let's just make sure the daily flow is logged.
+
+        // Optional: Update period's overall intensity if this is heavier?
+        // Leaving as is for now to focus on daily tracking.
       }
+
       // Force UI refresh
-      ref.invalidate(periodsStreamProvider(DateRange(
-        startDate: widget.selectedDate,
-        endDate: widget.selectedDate.add(const Duration(days: 1)),
-      )));
+      ref.invalidate(
+        periodsStreamProvider(
+          DateRange(
+            startDate: widget.selectedDate,
+            endDate: widget.selectedDate.add(const Duration(days: 1)),
+          ),
+        ),
+      );
+      // Also invalidate daily flow stream (to be added)
     });
   }
 
@@ -299,11 +420,15 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
             width: 80,
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
             decoration: BoxDecoration(
-              color: isSelected ? moodColor.withValues(alpha: 0.2) : colorScheme.surfaceContainerHigh,
+              color: isSelected
+                  ? moodColor.withValues(alpha: 0.2)
+                  : colorScheme.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(12),
               border: isSelected
                   ? Border.all(color: moodColor, width: 2)
-                  : Border.all(color: colorScheme.outline.withValues(alpha: 0.2)),
+                  : Border.all(
+                      color: colorScheme.outline.withValues(alpha: 0.2),
+                    ),
             ),
             child: Column(
               children: [
@@ -318,7 +443,9 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                    color: isSelected ? moodColor : colorScheme.onSurfaceVariant,
+                    color: isSelected
+                        ? moodColor
+                        : colorScheme.onSurfaceVariant,
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 1,
@@ -342,8 +469,8 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
         // Save new mood (replaces existing)
         await health.saveMood(date: widget.selectedDate, mood: moodType);
       }
-      // Force UI refresh
-      ref.invalidate(moodStreamProvider(widget.selectedDate));
+      // Force UI refresh (markers)
+      ref.invalidate(calendarProvider);
     });
   }
 
@@ -369,7 +496,9 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
   // ==================== SYMPTOMS SECTION ====================
   // 1 tap to toggle symptom on/off
   Widget _buildSymptomsSection() {
-    final symptomsAsync = ref.watch(symptomsStreamProvider(widget.selectedDate));
+    final symptomsAsync = ref.watch(
+      symptomsStreamProvider(widget.selectedDate),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -414,11 +543,15 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: isSelected ? symptomColor.withValues(alpha: 0.2) : colorScheme.surfaceContainerHigh,
+              color: isSelected
+                  ? symptomColor.withValues(alpha: 0.2)
+                  : colorScheme.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(20),
               border: isSelected
                   ? Border.all(color: symptomColor, width: 2)
-                  : Border.all(color: colorScheme.outline.withValues(alpha: 0.2)),
+                  : Border.all(
+                      color: colorScheme.outline.withValues(alpha: 0.2),
+                    ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -426,7 +559,9 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
                 Icon(
                   symptomType.icon,
                   size: 18,
-                  color: isSelected ? symptomColor : colorScheme.onSurfaceVariant,
+                  color: isSelected
+                      ? symptomColor
+                      : colorScheme.onSurfaceVariant,
                 ),
                 const SizedBox(width: 6),
                 Text(
@@ -434,7 +569,9 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                    color: isSelected ? symptomColor : colorScheme.onSurfaceVariant,
+                    color: isSelected
+                        ? symptomColor
+                        : colorScheme.onSurfaceVariant,
                   ),
                 ),
                 if (isSelected) ...[
@@ -478,7 +615,7 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
   }) {
     final symptomColor = _getSymptomColor(symptomType);
     final isNewSymptom = existingSymptom == null;
-    
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -516,7 +653,11 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
                       _addSymptomWithSeverity(symptomType, level, allSymptoms);
                     } else {
                       // Update existing symptom severity
-                      _updateSymptomSeverity(existingSymptom, level, allSymptoms);
+                      _updateSymptomSeverity(
+                        existingSymptom,
+                        level,
+                        allSymptoms,
+                      );
                     }
                   },
                   child: Column(
@@ -541,9 +682,7 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: isSelected
-                                  ? Colors.white
-                                  : symptomColor,
+                              color: isSelected ? Colors.white : symptomColor,
                             ),
                           ),
                         ),
@@ -583,12 +722,18 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
 
   String _getSeverityLabel(int level) {
     switch (level) {
-      case 1: return 'Mild';
-      case 2: return 'Light';
-      case 3: return 'Mod';
-      case 4: return 'Strong';
-      case 5: return 'Severe';
-      default: return '';
+      case 1:
+        return 'Mild';
+      case 2:
+        return 'Light';
+      case 3:
+        return 'Mod';
+      case 4:
+        return 'Strong';
+      case 5:
+        return 'Severe';
+      default:
+        return '';
     }
   }
 
@@ -611,15 +756,18 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
         symptomTypes: [...currentTypes, symptomType],
         severities: severities,
       );
-      ref.invalidate(symptomsStreamProvider(widget.selectedDate));
+      ref.invalidate(calendarProvider);
     });
   }
 
-  Future<void> _removeSymptom(Symptom symptom, List<Symptom> allSymptoms) async {
+  Future<void> _removeSymptom(
+    Symptom symptom,
+    List<Symptom> allSymptoms,
+  ) async {
     await _autoSave(() async {
       final health = ref.read(healthServiceProvider);
       await health.deleteSymptom(symptom.id);
-      ref.invalidate(symptomsStreamProvider(widget.selectedDate));
+      ref.invalidate(calendarProvider);
     });
   }
 
@@ -643,7 +791,7 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
         symptomTypes: allSymptoms.map((s) => s.symptomType).toList(),
         severities: severities,
       );
-      ref.invalidate(symptomsStreamProvider(widget.selectedDate));
+      ref.invalidate(calendarProvider);
     });
   }
 
@@ -672,7 +820,9 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
   // Inline toggles - no dialogs
   Widget _buildSexualActivitySection() {
     final colorScheme = Theme.of(context).colorScheme;
-    final activityAsync = ref.watch(sexualActivityStreamProvider(widget.selectedDate));
+    final activityAsync = ref.watch(
+      sexualActivityStreamProvider(widget.selectedDate),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -710,11 +860,15 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
                   duration: const Duration(milliseconds: 200),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   decoration: BoxDecoration(
-                    color: !hadSex ? colorScheme.surfaceContainerHighest : colorScheme.surfaceContainerHigh,
+                    color: !hadSex
+                        ? colorScheme.surfaceContainerHighest
+                        : colorScheme.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(12),
                     border: !hadSex
                         ? Border.all(color: colorScheme.outline, width: 2)
-                        : Border.all(color: colorScheme.outline.withValues(alpha: 0.2)),
+                        : Border.all(
+                            color: colorScheme.outline.withValues(alpha: 0.2),
+                          ),
                   ),
                   child: Center(
                     child: Text(
@@ -736,22 +890,33 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
                   duration: const Duration(milliseconds: 200),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   decoration: BoxDecoration(
-                    color: hadSex ? Colors.pink.withValues(alpha: 0.2) : colorScheme.surfaceContainerHigh,
+                    color: hadSex
+                        ? Colors.pink.withValues(alpha: 0.2)
+                        : colorScheme.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(12),
                     border: hadSex
                         ? Border.all(color: Colors.pink, width: 2)
-                        : Border.all(color: colorScheme.outline.withValues(alpha: 0.2)),
+                        : Border.all(
+                            color: colorScheme.outline.withValues(alpha: 0.2),
+                          ),
                   ),
                   child: Center(
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (hadSex) const Icon(Icons.favorite, size: 18, color: Colors.pink),
+                        if (hadSex)
+                          const Icon(
+                            Icons.favorite,
+                            size: 18,
+                            color: Colors.pink,
+                          ),
                         if (hadSex) const SizedBox(width: 6),
                         Text(
                           'Yes',
                           style: TextStyle(
-                            fontWeight: hadSex ? FontWeight.w600 : FontWeight.w400,
+                            fontWeight: hadSex
+                                ? FontWeight.w600
+                                : FontWeight.w400,
                             color: hadSex ? Colors.pink : colorScheme.onSurface,
                           ),
                         ),
@@ -793,21 +958,30 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
           runSpacing: 8,
           children: [
             _buildProtectionChip('None', null, activity),
-            ...ProtectionType.values.map((type) => _buildProtectionChip(
-                  type.value.replaceAll('_', ' '),
-                  type,
-                  activity,
-                )),
+            ...ProtectionType.values.map(
+              (type) => _buildProtectionChip(
+                type.value.replaceAll('_', ' '),
+                type,
+                activity,
+              ),
+            ),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildProtectionChip(String label, ProtectionType? type, SexualActivity activity) {
+  Widget _buildProtectionChip(
+    String label,
+    ProtectionType? type,
+    SexualActivity activity,
+  ) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isSelected = (type == null && !activity.protectionUsed) ||
-        (type != null && activity.protectionUsed && activity.protectionType == type);
+    final isSelected =
+        (type == null && !activity.protectionUsed) ||
+        (type != null &&
+            activity.protectionUsed &&
+            activity.protectionType == type);
 
     return GestureDetector(
       onTap: () => _updateProtection(type, activity),
@@ -815,10 +989,15 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.pink.withValues(alpha: 0.15) : colorScheme.surfaceContainerHigh,
+          color: isSelected
+              ? Colors.pink.withValues(alpha: 0.15)
+              : colorScheme.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(20),
           border: isSelected
-              ? Border.all(color: Colors.pink.withValues(alpha: 0.5), width: 1.5)
+              ? Border.all(
+                  color: Colors.pink.withValues(alpha: 0.5),
+                  width: 1.5,
+                )
               : Border.all(color: colorScheme.outline.withValues(alpha: 0.2)),
         ),
         child: Text(
@@ -833,7 +1012,10 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
     );
   }
 
-  Future<void> _toggleSexualActivity(bool hadSex, SexualActivity? existing) async {
+  Future<void> _toggleSexualActivity(
+    bool hadSex,
+    SexualActivity? existing,
+  ) async {
     await _autoSave(() async {
       final health = ref.read(healthServiceProvider);
       if (hadSex && existing == null) {
@@ -849,7 +1031,10 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
     });
   }
 
-  Future<void> _updateProtection(ProtectionType? type, SexualActivity activity) async {
+  Future<void> _updateProtection(
+    ProtectionType? type,
+    SexualActivity activity,
+  ) async {
     await _autoSave(() async {
       final health = ref.read(healthServiceProvider);
       // Delete and re-create with new protection info
@@ -895,7 +1080,9 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
           style: TextStyle(color: colorScheme.onSurface, fontSize: 14),
           decoration: InputDecoration(
             hintText: 'How was your day?',
-            hintStyle: TextStyle(color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+            hintStyle: TextStyle(
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+            ),
             filled: true,
             fillColor: colorScheme.surfaceContainerHigh,
             border: OutlineInputBorder(
@@ -918,9 +1105,11 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
     if (_noteController.text.trim().isEmpty) return;
 
     await _autoSave(() async {
-      await ref.read(healthServiceProvider).saveNote(
-        date: widget.selectedDate,
-        content: _noteController.text.trim(),
+      await ref
+          .read(healthServiceProvider)
+          .saveNote(
+            date: widget.selectedDate,
+            content: _noteController.text.trim(),
           );
       setState(() => _noteSaved = true);
       // Force UI refresh

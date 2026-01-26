@@ -138,10 +138,10 @@ class _OnboardingGate extends StatelessWidget {
     try {
       final response = await supabase
           .from('users')
-          .select('onboarding_completed')
+          .select('onboarding_complete')
           .eq('id', session.user.id)
           .single();
-      return response['onboarding_completed'] == true;
+      return response['onboarding_complete'] == true;
     } catch (e) {
       // If the `onboarding_completed` column does not exist (older schema),
       // fall back to the service-level check which treats presence of a

@@ -14,7 +14,6 @@ import 'package:lovely/models/note.dart';
 import 'package:lovely/core/exceptions/app_exceptions.dart';
 import 'package:lovely/services/cycle_analyzer.dart';
 
-
 class SupabaseService {
   // Singleton instance
   static final SupabaseService _instance = SupabaseService._internal();
@@ -64,7 +63,10 @@ class SupabaseService {
       if (c is _TestSupabaseClient) {
         c.auth.currentUser = user;
         c.auth.currentSession = session;
-        c.auth.emitAuthChange(user != null ? AuthChangeEvent.signedIn : AuthChangeEvent.signedOut, session);
+        c.auth.emitAuthChange(
+          user != null ? AuthChangeEvent.signedIn : AuthChangeEvent.signedOut,
+          session,
+        );
       }
     } catch (_) {}
   }
@@ -324,9 +326,7 @@ class SupabaseService {
     if (user == null) throw AuthException.sessionExpired();
 
     try {
-      await client.auth.updateUser(
-        UserAttributes(password: newPassword),
-      );
+      await client.auth.updateUser(UserAttributes(password: newPassword));
       debugPrint('Password updated successfully');
     } catch (e) {
       debugPrint('Error updating password: $e');
@@ -351,8 +351,8 @@ class SupabaseService {
     // Create combined name for backward compatibility with 'name' column
     String? fullName;
     if (firstName != null) {
-      fullName = lastName != null && lastName.isNotEmpty 
-          ? '$firstName $lastName' 
+      fullName = lastName != null && lastName.isNotEmpty
+          ? '$firstName $lastName'
           : firstName;
     }
 
@@ -367,6 +367,7 @@ class SupabaseService {
       'average_cycle_length': averageCycleLength ?? 28,
       'average_period_length': averagePeriodLength ?? 5,
       'last_period_start': lastPeriodStart?.toIso8601String(),
+      'onboarding_complete': true,
       'notifications_enabled': notificationsEnabled ?? true,
       'updated_at': DateTime.now().toIso8601String(),
     });
@@ -422,12 +423,12 @@ class SupabaseService {
   }) async {
     final user = currentUser;
     if (user == null) throw AuthException.sessionExpired();
-    
+
     try {
       final updates = <String, dynamic>{
         'updated_at': DateTime.now().toIso8601String(),
       };
-      
+
       if (firstName != null) updates['first_name'] = firstName.trim();
       if (lastName != null) updates['last_name'] = lastName.trim();
       if (username != null) updates['username'] = username.trim();
@@ -435,18 +436,16 @@ class SupabaseService {
       if (dateOfBirth != null) {
         updates['date_of_birth'] = dateOfBirth.toIso8601String();
       }
-      
+
       await client.from('users').update(updates).eq('id', user.id);
-      
+
       // Update display_name in auth metadata if username changed
       if (username != null) {
         await client.auth.updateUser(
-          UserAttributes(
-            data: {'display_name': username.trim()},
-          ),
+          UserAttributes(data: {'display_name': username.trim()}),
         );
       }
-      
+
       debugPrint('Profile updated successfully');
     } catch (e) {
       debugPrint('Error updating profile: $e');
@@ -510,13 +509,19 @@ class SupabaseService {
 
       for (final periodData in ongoingPeriods) {
         final period = Period.fromJson(periodData);
-        final daysSinceStart = DateTime.now().difference(period.startDate).inDays;
-        
+        final daysSinceStart = DateTime.now()
+            .difference(period.startDate)
+            .inDays;
+
         if (daysSinceStart > 15) {
           // Auto-close this abnormally long period
-          final autoEndDate = period.startDate.add(const Duration(days: 7)); // Default 7-day period
-          debugPrint('Warning: Auto-closing period ${period.id} ($daysSinceStart days old) with end date: $autoEndDate');
-          
+          final autoEndDate = period.startDate.add(
+            const Duration(days: 7),
+          ); // Default 7-day period
+          debugPrint(
+            'Warning: Auto-closing period ${period.id} ($daysSinceStart days old) with end date: $autoEndDate',
+          );
+
           await client
               .from('periods')
               .update({'end_date': autoEndDate.toIso8601String()})
@@ -531,7 +536,7 @@ class SupabaseService {
     // STEP 1: Record prediction accuracy if this is not the first period
     try {
       final userData = await getUserData();
-      
+
       if (userData == null) {
         debugPrint('Warning: User data not found');
       } else {
@@ -600,16 +605,22 @@ class SupabaseService {
         .single();
 
     final period = Period.fromJson(periodData);
-    
+
     // Validation 1: End date must be after or equal to start date
     if (endDate.isBefore(period.startDate)) {
-      throw ValidationException('End date cannot be before start date', code: 'VAL_003');
+      throw ValidationException(
+        'End date cannot be before start date',
+        code: 'VAL_003',
+      );
     }
 
     // Validation 2: Period cannot be longer than 15 days
     final durationDays = endDate.difference(period.startDate).inDays;
     if (durationDays > 15) {
-      throw ValidationException('Please keep periods under 15 days. Check the selected dates.', code: 'VAL_004');
+      throw ValidationException(
+        'Please keep periods under 15 days. Check the selected dates.',
+        code: 'VAL_004',
+      );
     }
 
     final response = await client
@@ -672,7 +683,7 @@ class SupabaseService {
     // Fetch periods that could overlap with the range
     // Start 60 days before to catch periods that might extend into the range
     final lookbackDate = startDate.subtract(const Duration(days: 60));
-    
+
     final response = await client
         .from('periods')
         .select()
@@ -681,17 +692,19 @@ class SupabaseService {
         .lte('start_date', endDate.toIso8601String())
         .order('start_date', ascending: false);
 
-    final allPeriods = (response as List).map((json) => Period.fromJson(json)).toList();
-    
+    final allPeriods = (response as List)
+        .map((json) => Period.fromJson(json))
+        .toList();
+
     // Filter to only include periods that actually overlap with the date range
     return allPeriods.where((period) {
       final periodStart = period.startDate;
       final periodEnd = period.endDate ?? DateTime.now(); // Ongoing period
-      
+
       // Check if period overlaps with the requested range
       // Period overlaps if: start <= endDate AND end >= startDate
       return periodStart.isBefore(endDate.add(const Duration(days: 1))) &&
-             periodEnd.isAfter(startDate.subtract(const Duration(days: 1)));
+          periodEnd.isAfter(startDate.subtract(const Duration(days: 1)));
     }).toList();
   }
 
@@ -950,7 +963,9 @@ class SupabaseService {
 
       return SexualActivity.fromJson(response);
     } catch (e) {
-      debugPrint('Failed to log sexual activity for ${date.toIso8601String()}: $e');
+      debugPrint(
+        'Failed to log sexual activity for ${date.toIso8601String()}: $e',
+      );
       rethrow;
     }
   }
@@ -1203,7 +1218,8 @@ class SupabaseService {
               })
               .map((json) => Period.fromJson(json))
               .toList();
-        }).cast<List<Period>>();
+        })
+        .cast<List<Period>>();
   }
 
   /// Stream moods for a date range
@@ -1227,7 +1243,8 @@ class SupabaseService {
               })
               .map((json) => Mood.fromJson(json))
               .toList();
-        }).cast<List<Mood>>();
+        })
+        .cast<List<Mood>>();
   }
 
   /// Stream symptoms for a date range
@@ -1252,7 +1269,8 @@ class SupabaseService {
               })
               .map((json) => Symptom.fromJson(json))
               .toList();
-        }).cast<List<Symptom>>();
+        })
+        .cast<List<Symptom>>();
   }
 
   /// Stream sexual activities for a date range
@@ -1276,7 +1294,8 @@ class SupabaseService {
               })
               .map((json) => SexualActivity.fromJson(json))
               .toList();
-        }).cast<List<SexualActivity>>();
+        })
+        .cast<List<SexualActivity>>();
   }
 
   /// Stream notes for a date range
@@ -1300,7 +1319,8 @@ class SupabaseService {
               })
               .map((json) => Note.fromJson(json))
               .toList();
-        }).cast<List<Note>>();
+        })
+        .cast<List<Note>>();
   }
 
   /// Stream mood for a specific date
@@ -1321,7 +1341,8 @@ class SupabaseService {
             }
           }
           return null;
-        }).cast<Mood?>();
+        })
+        .cast<Mood?>();
   }
 
   /// Stream note for a specific date
@@ -1342,7 +1363,8 @@ class SupabaseService {
             }
           }
           return null;
-        }).cast<Note?>();
+        })
+        .cast<Note?>();
   }
 
   /// Stream sexual activity for a specific date
@@ -1363,7 +1385,8 @@ class SupabaseService {
             }
           }
           return null;
-        }).cast<SexualActivity?>();
+        })
+        .cast<SexualActivity?>();
   }
 
   // Notification Preferences Methods
@@ -1388,14 +1411,16 @@ class SupabaseService {
 
   /// Save notification preferences for current user
   Future<void> saveNotificationPreferencesData(
-      Map<String, dynamic> preferences) async {
+    Map<String, dynamic> preferences,
+  ) async {
     final user = currentUser;
     if (user == null) throw AuthException.sessionExpired();
 
     try {
       await client
           .from('users')
-          .update({'notification_preferences': preferences}).eq('id', user.id);
+          .update({'notification_preferences': preferences})
+          .eq('id', user.id);
       debugPrint('Notification preferences saved');
     } catch (e) {
       debugPrint('Error saving notification preferences: $e');
@@ -1423,8 +1448,11 @@ class SupabaseService {
     if (user == null) throw AuthException.sessionExpired();
 
     try {
-      final response =
-          await client.from('users').select('fcm_token').eq('id', user.id).maybeSingle();
+      final response = await client
+          .from('users')
+          .select('fcm_token')
+          .eq('id', user.id)
+          .maybeSingle();
       return response?['fcm_token'] as String?;
     } catch (e) {
       debugPrint('Error getting FCM token: $e');
@@ -1440,7 +1468,8 @@ class SupabaseService {
     try {
       await client
           .from('users')
-          .update({'fcm_token': newToken}).eq('id', user.id);
+          .update({'fcm_token': newToken})
+          .eq('id', user.id);
       debugPrint('FCM token updated in database');
     } catch (e) {
       debugPrint('Error updating FCM token: $e');
@@ -1451,7 +1480,6 @@ class SupabaseService {
   // Note: These methods are implemented in the notification_provider.dart
   // This service layer provides the data persistence mechanisms
 }
-
 
 // ------------------
 // Test fallback client
@@ -1482,7 +1510,8 @@ class _FakeAuth {
 
   final _FakeAdmin admin = _FakeAdmin();
 
-  final StreamController<_FakeAuthChange> _controller = StreamController<_FakeAuthChange>.broadcast();
+  final StreamController<_FakeAuthChange> _controller =
+      StreamController<_FakeAuthChange>.broadcast();
 
   // Default no-op implementations
   Future<void> signOut() async {
@@ -1543,25 +1572,32 @@ class _FakeQueryBuilder implements Future<List<dynamic>> {
   Future<dynamic> singleOrNull() async => null;
 
   // Stream support used by .stream(...).map(...)
-  Stream<List<dynamic>> stream({List<String>? primaryKey}) => Stream<List<dynamic>>.value([]);
+  Stream<List<dynamic>> stream({List<String>? primaryKey}) =>
+      Stream<List<dynamic>>.value([]);
 
   // Future interface delegation
   @override
   Stream<List<dynamic>> asStream() => _result.asStream();
 
   @override
-  Future<List<dynamic>> catchError(Function onError, {bool Function(Object)? test}) =>
-      _result.catchError(onError as dynamic, test: test);
+  Future<List<dynamic>> catchError(
+    Function onError, {
+    bool Function(Object)? test,
+  }) => _result.catchError(onError as dynamic, test: test);
 
   @override
-  Future<R> then<R>(FutureOr<R> Function(List<dynamic> value) onValue, {Function? onError}) =>
-      _result.then(onValue, onError: onError as dynamic);
+  Future<R> then<R>(
+    FutureOr<R> Function(List<dynamic> value) onValue, {
+    Function? onError,
+  }) => _result.then(onValue, onError: onError as dynamic);
 
   @override
-  Future<List<dynamic>> timeout(Duration timeLimit, {FutureOr<List<dynamic>> Function()? onTimeout}) =>
-      _result.timeout(timeLimit, onTimeout: onTimeout);
+  Future<List<dynamic>> timeout(
+    Duration timeLimit, {
+    FutureOr<List<dynamic>> Function()? onTimeout,
+  }) => _result.timeout(timeLimit, onTimeout: onTimeout);
 
   @override
-  Future<List<dynamic>> whenComplete(FutureOr Function() action) => _result.whenComplete(action);
+  Future<List<dynamic>> whenComplete(FutureOr Function() action) =>
+      _result.whenComplete(action);
 }
-

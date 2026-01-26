@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Lovely — Subscribe</title>
+  </head>
+  <body>
+    <h1>Lovely — Subscribe</h1>
+    <button id="monthly">Subscribe Monthly ($3)</button>
+    <button id="annual">Subscribe Annual ($30)</button>
+
+    <script>
+      async function start(amount, product) {
+        // Replace with real user id when available
+        const userId = prompt('Enter test user_id (supabase user id)');
+        if (!userId) return alert('user_id required');
+
+        const resp = await fetch('/initiate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount, email: 'test@example.com', user_id: userId, product })
+        });
+        const json = await resp.json();
+        if (json.authorization_url) {
+          window.location.href = json.authorization_url;
+        } else {
+          alert('Failed to initiate payment: ' + JSON.stringify(json));
+        }
+      }
+
+      document.getElementById('monthly').addEventListener('click', () => start(3.00, 'monthly_3'));
+      document.getElementById('annual').addEventListener('click', () => start(30.00, 'annual_30'));
+    </script>
+  </body>
+</html>

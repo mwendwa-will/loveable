@@ -19,6 +19,8 @@ import 'firebase_options.dart';
 import 'package:lovely/services/supabase_service.dart';
 import 'package:lovely/navigation/app_router.dart';
 import 'package:lovely/core/feedback/feedback_service.dart';
+import 'package:app_links/app_links.dart';
+import 'package:lovely/providers/entitlements.dart';
 
 void main() {
   // Run the app inside a guarded zone. Ensure bindings and runApp occur
@@ -117,6 +119,7 @@ class _LovelyAppState extends ConsumerState<LovelyApp> with WidgetsBindingObserv
   void initState() {
     super.initState();
     _setupAuthListener();
+    _setupDeepLinkListener();
     WidgetsBinding.instance.addObserver(this);
 
     // If running under `flutter test`, skip PIN/platform-channel checks which
@@ -161,8 +164,43 @@ class _LovelyAppState extends ConsumerState<LovelyApp> with WidgetsBindingObserv
     }
   }
 
+  StreamSubscription<Uri?>? _linkSub;
+  final AppLinks _appLinks = AppLinks();
+
+  void _setupDeepLinkListener() {
+    // Subscribe to initial link and subsequent links via AppLinks
+    _linkSub = _appLinks.uriLinkStream.listen((Uri? uri) {
+      if (uri != null) _handleIncomingUri(uri.toString());
+    }, onError: (err) {
+      debugPrint('Deep link error: $err');
+    });
+  }
+
+  void _handleIncomingUri(String link) {
+    debugPrint('Incoming deep link: $link');
+    try {
+      final uri = Uri.parse(link);
+      // We're interested in lovely://success or lovely://purchase/success
+      if (uri.scheme == 'lovely' && (uri.host == 'success' || uri.path.contains('success'))) {
+      // Refresh entitlements when returning from website checkout
+      ref.read(entitlementsProvider.notifier).refresh();
+
+        // Optionally show a simple confirmation SnackBar
+        final ctx = navigatorKey.currentContext;
+        if (ctx != null) {
+          ScaffoldMessenger.of(ctx).showSnackBar(
+            const SnackBar(content: Text('Purchase restored — premium unlocked if active')),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to handle deep link: $e');
+    }
+  }
+
   @override
   void dispose() {
+    _linkSub?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }

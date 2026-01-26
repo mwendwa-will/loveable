@@ -16,13 +16,13 @@ class NotificationService {
   /// Initialize awesome_notifications and FCM with app icon and channel
   Future<void> initialize() async {
     debugPrint('Initializing Awesome Notifications & FCM...');
-    
+
     // Initialize Awesome Notifications
     await _initializeAwesomeNotifications();
-    
+
     // Initialize Firebase Messaging
     await _initializeFirebaseMessaging();
-    
+
     debugPrint('Notifications system initialized successfully');
   }
 
@@ -38,17 +38,17 @@ class NotificationService {
             channelName: 'Lovely Notifications',
             channelDescription: 'Notifications for Lovely app',
             defaultColor: Color.fromARGB(255, 255, 111, 97), // Coral Sunset
-            ledColor:  Color.fromARGB(255, 255, 111, 97),
+            ledColor: Color.fromARGB(255, 255, 111, 97),
             importance: NotificationImportance.High,
             channelShowBadge: true,
             enableVibration: true,
-      ),
+          ),
         ],
         channelGroups: [
           NotificationChannelGroup(
             channelGroupKey: 'lovely_channel_group',
             channelGroupName: 'Lovely',
-          )
+          ),
         ],
       );
 
@@ -70,15 +70,15 @@ class NotificationService {
       _firebaseMessaging = FirebaseMessaging.instance;
 
       // Request notification permissions
-      NotificationSettings settings =
-          await _firebaseMessaging.requestPermission(
-        alert: true,
-        announcement: false,
-        badge: true,
-        criticalAlert: false,
-        provisional: false,
-        sound: true,
-      );
+      NotificationSettings settings = await _firebaseMessaging
+          .requestPermission(
+            alert: true,
+            announcement: false,
+            badge: true,
+            criticalAlert: false,
+            provisional: false,
+            sound: true,
+          );
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized) {
         debugPrint('FCM permission granted');
@@ -115,8 +115,7 @@ class NotificationService {
       });
 
       // Handle background message (in isolate)
-      FirebaseMessaging.onBackgroundMessage(
-          firebaseMessagingBackgroundHandler);
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
       debugPrint('Firebase Messaging initialized');
     } catch (e) {
@@ -166,13 +165,34 @@ class NotificationService {
           title: 'How are you feeling today?',
           body: 'Log your mood and symptoms to track your wellness journey',
           notificationLayout: NotificationLayout.Default,
-          largeIcon: 'asset://assets/icons/mood_icon.png',
         ),
       );
       debugPrint('Mood check-in reminder sent');
     } catch (e) {
       debugPrint('Error sending mood check-in reminder: $e');
     }
+  }
+
+  /// Schedule a reminder for period tomorrow
+  Future<void> schedulePeriodForecast(DateTime predictedStartDate) async {
+    final reminderDate = predictedStartDate.subtract(const Duration(days: 1));
+
+    // Only schedule if reminder date is in the future
+    if (reminderDate.isBefore(DateTime.now())) return;
+
+    await scheduleNotification(
+      id: 100,
+      title: 'Period Prediction',
+      body: 'Your period is predicted to start tomorrow. Stay prepared!',
+      scheduledTime: DateTime(
+        reminderDate.year,
+        reminderDate.month,
+        reminderDate.day,
+        9, // 9 AM
+      ),
+      channelKey: 'lovely_channel',
+    );
+    debugPrint('Period forecast scheduled for ${reminderDate.toString()}');
   }
 
   /// Send a daily affirmation notification
@@ -197,9 +217,7 @@ class NotificationService {
   }
 
   /// Send a task reminder
-  Future<void> sendTaskReminder({
-    required String taskTitle,
-  }) async {
+  Future<void> sendTaskReminder({required String taskTitle}) async {
     try {
       await AwesomeNotifications().createNotification(
         content: NotificationContent(
