@@ -195,6 +195,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                   alpha: 0.1,
                                 ),
                               ),
+                              /*
                               Positioned(
                                 bottom: 0,
                                 right: 0,
@@ -224,6 +225,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             'Change Photo',
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(color: AppColors.primary),
+                          ),
+                          */
+                            ],
                           ),
                         ],
                       ),

@@ -13,9 +13,7 @@ class NotificationsSettingsScreen extends ConsumerWidget {
     final preferences = ref.watch(notificationPreferencesProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Notifications'),
-      ),
+      appBar: AppBar(title: const Text('Notifications')),
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -90,6 +88,7 @@ class NotificationsSettingsScreen extends ConsumerWidget {
 
             const Divider(height: 1),
 
+            /*
             // Affirmations Section
             _buildNotificationSection(
               context,
@@ -109,7 +108,9 @@ class NotificationsSettingsScreen extends ConsumerWidget {
             ),
 
             const Divider(height: 1),
+            */
 
+            /*
             // Task Reminders Section
             _buildNotificationSection(
               context,
@@ -127,7 +128,7 @@ class NotificationsSettingsScreen extends ConsumerWidget {
                   .read(notificationPreferencesProvider.notifier)
                   .setTaskReminderTime(hour, minute),
             ),
-
+            */
             SizedBox(height: context.responsive.spacingLg),
           ],
         ),
@@ -183,7 +184,9 @@ class NotificationsSettingsScreen extends ConsumerWidget {
                     Text(
                       subtitle,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                        color: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -199,7 +202,11 @@ class NotificationsSettingsScreen extends ConsumerWidget {
           if (enabled) ...[
             SizedBox(height: context.responsive.spacingMd),
             Container(
-              margin: EdgeInsets.only(left: context.responsive.spacingLg + context.responsive.smallIconSize),
+              margin: EdgeInsets.only(
+                left:
+                    context.responsive.spacingLg +
+                    context.responsive.smallIconSize,
+              ),
               padding: EdgeInsets.all(context.responsive.spacingMd),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -225,12 +232,8 @@ class NotificationsSettingsScreen extends ConsumerWidget {
                     ],
                   ),
                   TextButton(
-                    onPressed: () => _showTimePicker(
-                      context,
-                      hour,
-                      minute,
-                      onTimeChanged,
-                    ),
+                    onPressed: () =>
+                        _showTimePicker(context, hour, minute, onTimeChanged),
                     child: const Text('Change Time'),
                   ),
                 ],

@@ -64,10 +64,10 @@ class UserRepository {
     await _client.from('users').upsert({
       'id': user.id,
       'email': user.email,
-      if (fullName != null) 'name': fullName,
-      if (firstName != null) 'first_name': firstName,
-      if (lastName != null) 'last_name': lastName,
-      if (username != null) 'username': username,
+      'name': ?fullName,
+      'first_name': ?firstName,
+      'last_name': ?lastName,
+      'username': ?username,
       'date_of_birth': dateOfBirth?.toIso8601String(),
       'average_cycle_length': averageCycleLength ?? 28,
       'average_period_length': averagePeriodLength ?? 5,
@@ -113,14 +113,11 @@ class UserRepository {
       if (lastName != null && lastName.isNotEmpty) 'last_name': lastName,
       if (username != null && username.isNotEmpty) 'username': username,
       if (dateOfBirth != null) 'date_of_birth': dateOfBirth.toIso8601String(),
-      if (averageCycleLength != null)
-        'average_cycle_length': averageCycleLength,
-      if (averagePeriodLength != null)
-        'average_period_length': averagePeriodLength,
+      'average_cycle_length': ?averageCycleLength,
+      'average_period_length': ?averagePeriodLength,
       if (lastPeriodStart != null)
         'last_period_start': lastPeriodStart.toIso8601String(),
-      if (notificationsEnabled != null)
-        'notifications_enabled': notificationsEnabled,
+      'notifications_enabled': ?notificationsEnabled,
     };
 
     return await _client.auth.updateUser(UserAttributes(data: updates));

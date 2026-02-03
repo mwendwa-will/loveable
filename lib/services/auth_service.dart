@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:lovely/services/supabase_service.dart';
 import 'package:lovely/repositories/auth_repository.dart';
@@ -73,19 +74,38 @@ class AuthService {
       _repository.updatePassword(newPassword);
 
   Future<void> deleteAccount() async {
-    // This might currently be in SupabaseService directly or via edge function
-    // Assuming SupabaseService has it, we should move it to AuthRepo or generic repo
-    // For now, let's call SupabaseService().deleteAccount() if we can't move it yet
-    // Or simpler: implement in Repo.
-    // Let's assume we implement it in Repo or calling client directly
+    // Calls the 'delete_my_account' RPC function to securely delete the user.
+    // This database function handles the deletion of the user from auth.users
+    // and automatically triggers cleanup of all related data via database trigger.
     try {
-      await Supabase.instance.client.functions.invoke('delete-user');
+      // Verify user is authenticated
+      final user = currentUser;
+      if (user == null) {
+        throw Exception('No active session found');
+      }
+
+      // Call the RPC function to delete account
+      // The database trigger will automatically clean up all user data
+      final response = await Supabase.instance.client.rpc('delete_my_account');
+
+      // Check if deletion was successful
+      if (response != null && response['success'] == false) {
+        throw Exception(response['error'] ?? 'Failed to delete account');
+      }
+
+      // Sign out locally to clear session and remove PIN
       await signOut();
     } catch (e) {
-      // Fallback
-      await Supabase.instance.client.rpc('delete_user_account');
-      await signOut();
+      debugPrint('Error deleting account: $e');
+      rethrow;
     }
+  }
+
+  Future<void> signInWithOAuth(OAuthProvider provider) async {
+    await _repository.signInWithOAuth(
+      provider,
+      redirectTo: 'io.supabase.lovely://login-callback',
+    );
   }
 
   Future<void> resetPassword({required String email}) =>

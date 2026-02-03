@@ -40,7 +40,7 @@ class HealthRepository {
       if (existing != null) {
         final response = await _client
             .from('moods')
-            .update({'mood_type': mood.name, if (notes != null) 'notes': notes})
+            .update({'mood_type': mood.name, 'notes': ?notes})
             .eq('id', existing['id'])
             .select()
             .single();
@@ -50,7 +50,7 @@ class HealthRepository {
           'user_id': user.id,
           'date': date.toIso8601String().split('T')[0],
           'mood_type': mood.name,
-          if (notes != null) 'notes': notes,
+          'notes': ?notes,
         };
         final response = await _client
             .from('moods')

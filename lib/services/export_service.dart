@@ -39,9 +39,12 @@ class ExportService {
 
       await file.writeAsString(csvContent);
 
-      await Share.shareXFiles([
-        XFile(file.path),
-      ], text: 'My Lovely cycle data export');
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          text: 'My Lovely cycle data export',
+        ),
+      );
     } catch (e) {
       rethrow;
     }

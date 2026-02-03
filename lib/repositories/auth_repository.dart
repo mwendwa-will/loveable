@@ -147,6 +147,13 @@ class AuthRepository {
     await _client.auth.resetPasswordForEmail(email);
   }
 
+  Future<void> signInWithOAuth(
+    OAuthProvider provider, {
+    String? redirectTo,
+  }) async {
+    await _client.auth.signInWithOAuth(provider, redirectTo: redirectTo);
+  }
+
   Future<void> updatePassword(String newPassword) async {
     final user = currentUser;
     if (user == null) throw AuthException.sessionExpired();

@@ -25,20 +25,23 @@ import 'package:lovely/providers/entitlements.dart';
 void main() {
   // Run the app inside a guarded zone. Ensure bindings and runApp occur
   // within the same zone to avoid zone-mismatch warnings.
-  runZonedGuarded(() {
-    WidgetsFlutterBinding.ensureInitialized();
+  runZonedGuarded(
+    () {
+      WidgetsFlutterBinding.ensureInitialized();
 
-    // Launch asynchronous bootstrap inside the zone. We intentionally do not
-    // await here so the zone encloses all callbacks created during init.
-    _bootstrapAndRunApp();
-  }, (error, stack) {
-    final ctx = navigatorKey.currentContext;
-    if (ctx != null) {
-      try {
-        FeedbackService.showError(ctx, error);
-      } catch (_) {}
-    }
-  });
+      // Launch asynchronous bootstrap inside the zone. We intentionally do not
+      // await here so the zone encloses all callbacks created during init.
+      _bootstrapAndRunApp();
+    },
+    (error, stack) {
+      final ctx = navigatorKey.currentContext;
+      if (ctx != null) {
+        try {
+          FeedbackService.showError(ctx, error);
+        } catch (_) {}
+      }
+    },
+  );
 }
 
 Future<void> _bootstrapAndRunApp() async {
@@ -69,9 +72,7 @@ Future<void> _bootstrapAndRunApp() async {
     debugPrint('Initializing Supabase (10s timeout)...');
 
     try {
-      await SupabaseService.initialize().timeout(
-        const Duration(seconds: 10),
-      );
+      await SupabaseService.initialize().timeout(const Duration(seconds: 10));
       debugPrint('Supabase initialized successfully');
     } catch (e) {
       if (e is Exception && e.toString().contains('timeout')) {
@@ -110,7 +111,8 @@ class LovelyApp extends ConsumerStatefulWidget {
   ConsumerState<LovelyApp> createState() => _LovelyAppState();
 }
 
-class _LovelyAppState extends ConsumerState<LovelyApp> with WidgetsBindingObserver {
+class _LovelyAppState extends ConsumerState<LovelyApp>
+    with WidgetsBindingObserver {
   late Future<void> _pinCheckFuture;
   bool _pinEnabled = false;
   bool _pinUnlocked = false;
@@ -134,7 +136,9 @@ class _LovelyAppState extends ConsumerState<LovelyApp> with WidgetsBindingObserv
       debugPrint('Running in test mode: skipping PIN checks');
     } else {
       // Check PIN after first frame (gives Android time to initialize)
-      _pinCheckFuture = Future.delayed(const Duration(milliseconds: 100)).then((_) async {
+      _pinCheckFuture = Future.delayed(const Duration(milliseconds: 100)).then((
+        _,
+      ) async {
         if (!mounted) return;
 
         try {
@@ -169,29 +173,42 @@ class _LovelyAppState extends ConsumerState<LovelyApp> with WidgetsBindingObserv
 
   void _setupDeepLinkListener() {
     // Subscribe to initial link and subsequent links via AppLinks
-    _linkSub = _appLinks.uriLinkStream.listen((Uri? uri) {
-      if (uri != null) _handleIncomingUri(uri.toString());
-    }, onError: (err) {
-      debugPrint('Deep link error: $err');
-    });
+    _linkSub = _appLinks.uriLinkStream.listen(
+      (Uri? uri) {
+        if (uri != null) _handleIncomingUri(uri.toString());
+      },
+      onError: (err) {
+        debugPrint('Deep link error: $err');
+      },
+    );
   }
 
   void _handleIncomingUri(String link) {
     debugPrint('Incoming deep link: $link');
     try {
       final uri = Uri.parse(link);
-      // We're interested in lovely://success or lovely://purchase/success
-      if (uri.scheme == 'lovely' && (uri.host == 'success' || uri.path.contains('success'))) {
-      // Refresh entitlements when returning from website checkout
-      ref.read(entitlementsProvider.notifier).refresh();
 
-        // Optionally show a simple confirmation SnackBar
+      // Handle Purchase/Payment Success
+      if (uri.scheme == 'lovely' &&
+          (uri.host == 'success' || uri.path.contains('success'))) {
+        // Refresh entitlements when returning from website checkout
+        ref.read(entitlementsProvider.notifier).refresh();
+
         final ctx = navigatorKey.currentContext;
         if (ctx != null) {
           ScaffoldMessenger.of(ctx).showSnackBar(
-            const SnackBar(content: Text('Purchase restored — premium unlocked if active')),
+            const SnackBar(
+              content: Text('Purchase restored — premium unlocked if active'),
+            ),
           );
         }
+      }
+      // Handle Social Auth Redirect
+      else if (uri.scheme == 'io.supabase.lovely' &&
+          uri.host == 'login-callback') {
+        debugPrint(
+          'Social login deep link captured - Supabase will handle the session',
+        );
       }
     } catch (e) {
       debugPrint('Failed to handle deep link: $e');
@@ -208,10 +225,11 @@ class _LovelyAppState extends ConsumerState<LovelyApp> with WidgetsBindingObserv
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    
+
     final pinState = ref.read(pinLockProvider);
-    
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
       // App went to background - lock it
       if (pinState.isEnabled) {
         ref.read(pinLockProvider.notifier).lock();
@@ -225,8 +243,10 @@ class _LovelyAppState extends ConsumerState<LovelyApp> with WidgetsBindingObserv
   }
 
   void _checkTimeoutAndShowPinOrLogout() async {
-    final shouldLogout = await ref.read(pinLockProvider.notifier).shouldLogoutDueToTimeout();
-    
+    final shouldLogout = await ref
+        .read(pinLockProvider.notifier)
+        .shouldLogoutDueToTimeout();
+
     if (shouldLogout) {
       // Timeout exceeded - logout user
       _handleTimeoutLogout();
@@ -243,7 +263,9 @@ class _LovelyAppState extends ConsumerState<LovelyApp> with WidgetsBindingObserv
         // Show message to user
         ScaffoldMessenger.of(ctx).showSnackBar(
           const SnackBar(
-            content: Text('For your security, you have been logged out due to inactivity'),
+            content: Text(
+              'For your security, you have been logged out due to inactivity',
+            ),
             duration: Duration(seconds: 4),
             behavior: SnackBarBehavior.floating,
           ),
@@ -251,7 +273,7 @@ class _LovelyAppState extends ConsumerState<LovelyApp> with WidgetsBindingObserv
 
         // Logout user
         await AuthService().signOut();
-        
+
         // Clear PIN lock state
         await ref.read(pinLockProvider.notifier).refresh();
       }
@@ -265,14 +287,14 @@ class _LovelyAppState extends ConsumerState<LovelyApp> with WidgetsBindingObserv
         Navigator.of(ctx).pushNamed(
           AppRoutes.pinUnlock,
           arguments: {
-              'onUnlocked': () async {
-                await ref.read(pinLockProvider.notifier).unlock();
-                if (!mounted) return;
-                final ctx2 = navigatorKey.currentContext;
-                if (ctx2 != null) {
-                  Navigator.of(ctx2).pop(true);
-                }
+            'onUnlocked': () async {
+              await ref.read(pinLockProvider.notifier).unlock();
+              if (!mounted) return;
+              final ctx2 = navigatorKey.currentContext;
+              if (ctx2 != null) {
+                Navigator.of(ctx2).pop(true);
               }
+            },
           },
         );
       }
@@ -361,16 +383,14 @@ class _LovelyAppState extends ConsumerState<LovelyApp> with WidgetsBindingObserv
           // While checking PIN, show loading
           if (snapshot.connectionState != ConnectionState.done) {
             return const Scaffold(
-              body: Center(
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
+              body: Center(child: CircularProgressIndicator(strokeWidth: 2)),
             );
           }
-          
+
           // PIN check complete
           // If PIN enabled and not yet unlocked, show PIN screen
           if (_pinEnabled && !_pinUnlocked) {
-                    debugPrint('Showing PIN unlock screen (initial)');
+            debugPrint('Showing PIN unlock screen (initial)');
             return PinUnlockScreen(
               onUnlocked: () {
                 debugPrint('PIN unlocked via callback');
@@ -383,7 +403,7 @@ class _LovelyAppState extends ConsumerState<LovelyApp> with WidgetsBindingObserv
               },
             );
           }
-          
+
           // PIN unlocked or not enabled, show main app
           debugPrint('Showing AuthGate');
           return const AuthGate();

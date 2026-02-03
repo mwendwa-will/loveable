@@ -52,10 +52,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       await Future.delayed(const Duration(milliseconds: 100));
 
       var user = authService.currentUser;
-      
+
       if (user != null) {
         debugPrint('User loaded: ${user.email}');
-        debugPrint('Session: ${authService.currentSession != null ? 'Valid' : 'None'}');
+        debugPrint(
+          'Session: ${authService.currentSession != null ? 'Valid' : 'None'}',
+        );
         setState(() {
           _isLoading = false;
         });
@@ -63,20 +65,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         // If still no user, retry once with session refresh
         debugPrint('No user found, retrying with session refresh...');
         await Future.delayed(const Duration(milliseconds: 500));
-        
+
         try {
           await authService.refreshSession();
         } catch (e) {
           debugPrint('Warning: Session refresh failed: $e');
         }
-        
+
         user = authService.currentUser;
         if (user != null) {
           debugPrint('User loaded after refresh: ${user.email}');
         } else {
           debugPrint('Still no user after refresh');
         }
-        
+
         setState(() {
           _isLoading = false;
         });
@@ -112,7 +114,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     switch (_currentPage) {
       case 0: // Profile page - no required fields
         return true;
-      
+
       case 1: // Cycle info page - validate cycle lengths
         if (_averageCycleLength < 21 || _averageCycleLength > 35) {
           errorMessage = 'Please keep cycle length between 21 and 35 days.';
@@ -120,13 +122,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           errorMessage = 'Period length works best between 2 and 10 days.';
         }
         break;
-      
+
       case 2: // Last period page - require date
         if (_lastPeriodStart == null) {
           errorMessage = 'Please provide your last period date to get started.';
         }
         break;
-      
+
       case 3: // Notifications page - no required fields
         return true;
     }
@@ -157,10 +159,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
       // Get current user with retry logic
       var user = authService.currentUser;
-      
+
       // If no user, try refreshing session
       if (user == null) {
-          debugPrint('No current user, attempting session refresh...');
+        debugPrint('No current user, attempting session refresh...');
         try {
           await authService.refreshSession();
           user = authService.currentUser;
@@ -169,7 +171,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           debugPrint('Session refresh failed: $e');
         }
       }
-      
+
       // If still no user, fail
       if (user == null) {
         debugPrint('No authenticated user found after refresh');
@@ -182,11 +184,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       var username = user.userMetadata?['username'] as String?;
       var firstName = user.userMetadata?['first_name'] as String?;
       var lastName = user.userMetadata?['last_name'] as String?;
-      
+
       debugPrint('Username from metadata: $username');
       debugPrint('First name from metadata: $firstName');
       debugPrint('Last name from metadata: $lastName');
-      
+
       // If username not in metadata, try to get it from the database
       if (username == null || username.isEmpty) {
         debugPrint('Username not in metadata, querying database...');
@@ -196,14 +198,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         lastName ??= userData?['last_name'] as String?;
         debugPrint('Username from database: $username');
       }
-      
+
       // Username is required
       if (username == null || username.isEmpty) {
-        throw AuthException('Username not found. Please sign up again.', code: 'AUTH_009');
+        throw AuthException(
+          'Username not found. Please sign up again.',
+          code: 'AUTH_009',
+        );
       }
 
       debugPrint('Saving onboarding data for user: $username');
-      
+
       // Save user data to Supabase
       await profileService.saveUserData(
         username: username,
@@ -220,11 +225,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
       // If last period start is recent (within average period length), create an active period record
       if (_lastPeriodStart != null) {
-        final daysSinceStart = DateTime.now().difference(_lastPeriodStart!).inDays;
+        final daysSinceStart = DateTime.now()
+            .difference(_lastPeriodStart!)
+            .inDays;
         // Use user's average period length instead of hardcoded 7 days
         if (daysSinceStart <= _averagePeriodLength) {
-            try {
-            debugPrint('Last period is recent ($daysSinceStart days ago, threshold: $_averagePeriodLength days), creating active period record...');
+          try {
+            debugPrint(
+              'Last period is recent ($daysSinceStart days ago, threshold: $_averagePeriodLength days), creating active period record...',
+            );
             // Start with light intensity by default, user can update in DailyLogScreen
             await periodService.startPeriod(
               startDate: _lastPeriodStart!,
@@ -252,10 +261,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
       if (mounted) {
         // Navigate to home screen
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          AppRoutes.home,
-          (route) => false,
-        );
+        Navigator.of(
+          context,
+        ).pushNamedAndRemoveUntil(AppRoutes.home, (route) => false);
       }
     } catch (e) {
       debugPrint('Onboarding error: $e');
@@ -340,9 +348,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         ),
                       ),
                       child: Text(
-                        _currentPage == _totalPages - 1
-                            ? 'Let\'s Go!'
-                            : 'Next',
+                        _currentPage == _totalPages - 1 ? 'Let\'s Go!' : 'Next',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -602,9 +608,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
           Text(
             '* Required',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).colorScheme.primary,
               fontStyle: FontStyle.italic,
             ),
@@ -760,6 +764,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   'Period Predictions',
                   'Get notified before your period starts',
                 ),
+                /*
                 const Divider(height: 32),
                 _buildNotificationItem(
                   FontAwesomeIcons.listCheck,
@@ -772,6 +777,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   'Daily Affirmations',
                   'Receive uplifting messages each day',
                 ),
+                */
               ],
             ),
           ),

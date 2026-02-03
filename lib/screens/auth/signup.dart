@@ -7,6 +7,7 @@ import 'package:lovely/core/feedback/feedback_service.dart';
 import 'package:lovely/core/exceptions/app_exceptions.dart';
 import 'package:lovely/services/auth_service.dart';
 import 'package:lovely/services/profile_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 
 class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
@@ -89,7 +90,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
       try {
         final auth = AuthService();
-        
+
         debugPrint('Attempting signup...');
         final response = await auth.signUp(
           email: _emailController.text.trim(),
@@ -101,25 +102,32 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
         debugPrint('Signup response received');
         debugPrint('User: ${response.user?.email}');
-        debugPrint('Session: ${response.session?.accessToken != null ? 'Created' : 'Not created'}');
+        debugPrint(
+          'Session: ${response.session?.accessToken != null ? 'Created' : 'Not created'}',
+        );
 
         if (response.user != null && mounted) {
           // Wait a moment for auth state to stabilize
           await Future.delayed(const Duration(milliseconds: 500));
-          
+
           debugPrint('Checking auth state after signup...');
           final currentUser = auth.currentUser;
           final currentSession = auth.currentSession;
-          
+
           debugPrint('Current user: ${currentUser?.email}');
-          debugPrint('Current session: ${currentSession != null ? 'Valid' : 'None'}');
-          
+          debugPrint(
+            'Current session: ${currentSession != null ? 'Valid' : 'None'}',
+          );
+
           if (mounted) {
             // Navigate to onboarding after successful signup
             Navigator.of(context).pushReplacementNamed(AppRoutes.onboarding);
           }
         } else {
-          throw AuthException('Signup failed: No user returned', code: 'AUTH_007');
+          throw AuthException(
+            'Signup failed: No user returned',
+            code: 'AUTH_007',
+          );
         }
       } catch (e) {
         debugPrint('Signup error: $e');
@@ -137,9 +145,21 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   }
 
   Future<void> _handleSocialLogin(String provider) async {
-    // TODO: Implement social login logic
-    if (mounted) {
-      FeedbackService.showInfo(context, '$provider login coming soon');
+    setState(() => _isLoading = true);
+    try {
+      if (provider == 'Google') {
+        await AuthService().signInWithOAuth(OAuthProvider.google);
+      } else if (provider == 'Apple') {
+        await AuthService().signInWithOAuth(OAuthProvider.apple);
+      }
+    } catch (e) {
+      if (mounted) {
+        FeedbackService.showError(context, e);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -303,19 +323,21 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                                 child: SizedBox(
                                   width: 20,
                                   height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
                                 ),
                               )
                             : _usernameController.text.length >= 3
-                                ? Icon(
-                                    _usernameAvailable
-                                        ? Icons.check_circle
-                                        : Icons.error,
-                                    color: _usernameAvailable
-                                        ? Colors.green
-                                        : Colors.red,
-                                  )
-                                : null,
+                            ? Icon(
+                                _usernameAvailable
+                                    ? Icons.check_circle
+                                    : Icons.error,
+                                color: _usernameAvailable
+                                    ? Colors.green
+                                    : Colors.red,
+                              )
+                            : null,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -593,19 +615,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                           iconColor: Colors.red,
                         ),
                       ),
-                      const SizedBox(width: 16),
-
-                      // Facebook Button
-                      Semantics(
-                        button: true,
-                        label: 'Sign up with Facebook',
-                        child: _SocialLoginButton(
-                          icon: FontAwesomeIcons.facebookF,
-                          onPressed: () => _handleSocialLogin('Facebook'),
-                          backgroundColor: const Color(0xFF1877F2),
-                          iconColor: Colors.white,
-                        ),
-                      ),
 
                       // Apple Button (iOS only)
                       if (isIOS) ...[
@@ -638,7 +647,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                         hint: 'Navigate to sign in',
                         child: TextButton(
                           onPressed: () {
-                            Navigator.of(context).pushReplacementNamed(AppRoutes.login);
+                            Navigator.of(
+                              context,
+                            ).pushReplacementNamed(AppRoutes.login);
                           },
                           child: const Text(
                             'Sign In',

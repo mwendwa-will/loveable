@@ -195,45 +195,45 @@ class NotificationService {
     debugPrint('Period forecast scheduled for ${reminderDate.toString()}');
   }
 
-  /// Send a daily affirmation notification
-  Future<void> sendAffirmationNotification({
-    required String affirmation,
-  }) async {
-    try {
-      await AwesomeNotifications().createNotification(
-        content: NotificationContent(
-          id: 3,
-          channelKey: 'lovely_channel',
-          title: 'Daily Affirmation',
-          body: affirmation,
-          notificationLayout: NotificationLayout.Default,
-          largeIcon: 'asset://assets/icons/affirmation_icon.png',
-        ),
-      );
-      debugPrint('Affirmation notification sent');
-    } catch (e) {
-      debugPrint('Error sending affirmation: $e');
-    }
-  }
+  // /// Send a daily affirmation notification (Not yet implemented)
+  // Future<void> sendAffirmationNotification({
+  //   required String affirmation,
+  // }) async {
+  //   try {
+  //     await AwesomeNotifications().createNotification(
+  //       content: NotificationContent(
+  //         id: 3,
+  //         channelKey: 'lovely_channel',
+  //         title: 'Daily Affirmation',
+  //         body: affirmation,
+  //         notificationLayout: NotificationLayout.Default,
+  //         largeIcon: 'asset://assets/icons/affirmation_icon.png',
+  //       ),
+  //     );
+  //     debugPrint('Affirmation notification sent');
+  //   } catch (e) {
+  //     debugPrint('Error sending affirmation: $e');
+  //   }
+  // }
 
-  /// Send a task reminder
-  Future<void> sendTaskReminder({required String taskTitle}) async {
-    try {
-      await AwesomeNotifications().createNotification(
-        content: NotificationContent(
-          id: 4,
-          channelKey: 'lovely_channel',
-          title: 'Task Reminder',
-          body: taskTitle,
-          notificationLayout: NotificationLayout.Default,
-          largeIcon: 'asset://assets/icons/task_icon.png',
-        ),
-      );
-      debugPrint('Task reminder sent: $taskTitle');
-    } catch (e) {
-      debugPrint('Error sending task reminder: $e');
-    }
-  }
+  // /// Send a task reminder (Not yet implemented)
+  // Future<void> sendTaskReminder({required String taskTitle}) async {
+  //   try {
+  //     await AwesomeNotifications().createNotification(
+  //       content: NotificationContent(
+  //         id: 4,
+  //         channelKey: 'lovely_channel',
+  //         title: 'Task Reminder',
+  //         body: taskTitle,
+  //         notificationLayout: NotificationLayout.Default,
+  //         largeIcon: 'asset://assets/icons/task_icon.png',
+  //       ),
+  //     );
+  //     debugPrint('Task reminder sent: $taskTitle');
+  //   } catch (e) {
+  //     debugPrint('Error sending task reminder: $e');
+  //   }
+  // }
 
   /// Schedule a notification for a specific time
   Future<void> scheduleNotification({

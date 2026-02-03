@@ -59,6 +59,7 @@ class NotificationsSettingsDialog extends ConsumerWidget {
             const Divider(),
             SizedBox(height: context.responsive.spacingMd),
 
+            /*
             // Affirmations Section
             _buildNotificationSection(
               context,
@@ -95,6 +96,7 @@ class NotificationsSettingsDialog extends ConsumerWidget {
                   .read(notificationPreferencesProvider.notifier)
                   .setTaskReminderTime(hour, minute),
             ),
+            */
           ],
         ),
       ),
@@ -132,9 +134,9 @@ class NotificationsSettingsDialog extends ConsumerWidget {
             Expanded(
               child: Text(
                 title,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
               ),
             ),
             Switch(
@@ -157,16 +159,9 @@ class NotificationsSettingsDialog extends ConsumerWidget {
                   ),
                 ),
                 TextButton.icon(
-                  onPressed: () => _showTimePicker(
-                    context,
-                    hour,
-                    minute,
-                    onTimeChanged,
-                  ),
-                  icon: const FaIcon(
-                    FontAwesomeIcons.clock,
-                    size: 14,
-                  ),
+                  onPressed: () =>
+                      _showTimePicker(context, hour, minute, onTimeChanged),
+                  icon: const FaIcon(FontAwesomeIcons.clock, size: 14),
                   label: const Text('Change'),
                 ),
               ],

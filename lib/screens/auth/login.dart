@@ -6,6 +6,7 @@ import 'package:lovely/navigation/app_router.dart';
 import 'package:lovely/core/feedback/feedback_service.dart';
 import 'package:lovely/services/auth_service.dart';
 import 'package:lovely/services/profile_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -73,8 +74,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _handleSocialLogin(String provider) async {
-    // TODO: Implement social login logic
-    FeedbackService.showInfo(context, '$provider login coming soon');
+    setState(() => _isLoading = true);
+    try {
+      if (provider == 'Google') {
+        await AuthService().signInWithOAuth(OAuthProvider.google);
+      } else if (provider == 'Apple') {
+        await AuthService().signInWithOAuth(OAuthProvider.apple);
+      }
+    } catch (e) {
+      if (mounted) {
+        FeedbackService.showError(context, e);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
@@ -252,7 +267,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       hint: 'Reset your password',
                       child: TextButton(
                         onPressed: () {
-                          Navigator.of(context).pushNamed(AppRoutes.forgotPassword);
+                          Navigator.of(
+                            context,
+                          ).pushNamed(AppRoutes.forgotPassword);
                         },
                         child: const Text(
                           'Forgot Password?',
@@ -331,19 +348,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           iconColor: Colors.red,
                         ),
                       ),
-                      const SizedBox(width: 16),
-
-                      // Facebook Button
-                      Semantics(
-                        button: true,
-                        label: 'Sign in with Facebook',
-                        child: _SocialLoginButton(
-                          icon: FontAwesomeIcons.facebookF,
-                          onPressed: () => _handleSocialLogin('Facebook'),
-                          backgroundColor: const Color(0xFF1877F2),
-                          iconColor: Colors.white,
-                        ),
-                      ),
 
                       // Apple Button (iOS only)
                       if (isIOS) ...[
@@ -374,8 +378,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         hint: 'Create a new account',
                         child: TextButton(
                           onPressed: () {
-                            // SupabaseAuthUI handles sign-up flow
-                            FeedbackService.showInfo(context, 'Click "Don\'t have an account?" on the login screen to sign up');
+                            Navigator.of(context).pushNamed(AppRoutes.signup);
                           },
                           child: const Text(
                             'Sign Up',

@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -182,51 +183,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
                   children: [
-                    // Profile Header
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(context.responsive.spacingLg),
-                      decoration: BoxDecoration(
-                        gradient: AppColors.primaryGradient,
-                      ),
-                      child: Column(
-                        children: [
-                          _buildInitialsAvatar(radius: 50),
-                          SizedBox(height: context.responsive.spacingMd),
-                          Text(
-                            _userName,
-                            style: Theme.of(context).textTheme.headlineSmall
-                                ?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
-                          SizedBox(height: context.responsive.spacingSm),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                _userEmail,
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.9,
-                                      ),
-                                    ),
-                              ),
-                              if (_isEmailVerified) ...[
-                                SizedBox(width: context.responsive.spacingMd),
-                                Icon(
-                                  Icons.verified,
-                                  color: Colors.white,
-                                  size: context.responsive.smallIconSize,
-                                ),
-                              ],
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
+                    // Profile Header (Premium Dashboard Card)
+                    _buildPremiumHeader(context),
 
                     // PROFILE Section
                     _buildSection(
@@ -331,6 +289,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             ).pushNamed(AppRoutes.notificationsSettings);
                           },
                         ),
+                        /*
                         _buildListTile(
                           context,
                           icon: FontAwesomeIcons.palette,
@@ -341,6 +300,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             _showAppearanceDialog(context);
                           },
                         ),
+                        */
                       ],
                     ),
 
@@ -358,6 +318,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           subtitle: 'Protect your data with a PIN',
                           onTap: () => _showPinSettings(context),
                         ),
+                        /*
                         _buildListTile(
                           context,
                           icon: FontAwesomeIcons.shield,
@@ -371,6 +332,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             );
                           },
                         ),
+                        */
                       ],
                     ),
 
@@ -380,6 +342,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       title: 'SUPPORT & LEGAL',
                       sectionColor: const Color(0xFF9C27B0),
                       items: [
+                        /*
                         _buildListTile(
                           context,
                           icon: FontAwesomeIcons.shield,
@@ -419,6 +382,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             );
                           },
                         ),
+                        */
                         _buildListTile(
                           context,
                           icon: FontAwesomeIcons.circleInfo,
@@ -433,17 +397,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
 
                     // ACCOUNT ACTIONS Section
-                    _buildSection(
+                    _buildPremiumSection(
                       context,
                       title: 'ACCOUNT ACTIONS',
                       sectionColor: AppColors.error,
                       items: [
-                        _buildListTile(
+                        _buildPremiumItem(
                           context,
                           icon: FontAwesomeIcons.trashCan,
                           iconColor: AppColors.error,
                           title: 'Delete Account',
-                          subtitle: 'We\'ll miss you - this can\'t be undone',
+                          subtitle: "We'll miss you - this can't be undone",
                           titleColor: AppColors.error,
                           onTap: () {
                             _showDeleteAccountDialog(context);
@@ -454,7 +418,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
                     // Sign Out Button
                     Padding(
-                      padding: EdgeInsets.all(context.responsive.spacingLg),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: context.responsive.spacingLg,
+                        vertical: context.responsive.spacingMd,
+                      ),
                       child: SizedBox(
                         width: double.infinity,
                         child: OutlinedButton.icon(
@@ -463,12 +430,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             padding: EdgeInsets.symmetric(
                               vertical: context.responsive.spacingMd,
                             ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
                             side: BorderSide(
-                              color: Theme.of(context).colorScheme.outline,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.outline.withValues(alpha: 0.5),
                             ),
                           ),
-                          icon: const FaIcon(FontAwesomeIcons.rightFromBracket),
-                          label: const Text('Sign Out'),
+                          icon: const FaIcon(
+                            FontAwesomeIcons.rightFromBracket,
+                            size: 18,
+                          ),
+                          label: const Text(
+                            'Sign Out',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
                         ),
                       ),
                     ),
@@ -481,26 +459,163 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
+  Widget _buildPremiumHeader(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: EdgeInsets.symmetric(
+        horizontal: context.responsive.spacingMd,
+        vertical: context.responsive.spacingMd,
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: AppColors.primaryGradient,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.2),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Stack(
+            children: [
+              // Glassmorphic overlay effect
+              Positioned.fill(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.1),
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.all(context.responsive.spacingLg),
+                child: Column(
+                  children: [
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        SizedBox(
+                          width: 110,
+                          height: 110,
+                          child: CircularProgressIndicator(
+                            value: _profileCompletion,
+                            strokeWidth: 4,
+                            backgroundColor: Colors.white.withValues(
+                              alpha: 0.2,
+                            ),
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        ),
+                        _buildInitialsAvatar(radius: 48),
+                      ],
+                    ),
+                    SizedBox(height: context.responsive.spacingMd),
+                    Text(
+                      _userName,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                    ),
+                    SizedBox(height: context.responsive.spacingXs),
+                    Text(
+                      _userEmail,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
+                    ),
+                    if (_isEmailVerified) ...[
+                      SizedBox(height: context.responsive.spacingSm),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.verified, color: Colors.white, size: 14),
+                            SizedBox(width: 6),
+                            Text(
+                              'Verified Member',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSection(
     BuildContext context, {
     required String title,
     required List<Widget> items,
     required Color sectionColor,
-    bool showCompletion = false,
-    double completion = 0.0,
+  }) {
+    return _buildPremiumSection(
+      context,
+      title: title,
+      items: items,
+      sectionColor: sectionColor,
+    );
+  }
+
+  Widget _buildPremiumSection(
+    BuildContext context, {
+    required String title,
+    required List<Widget> items,
+    required Color sectionColor,
   }) {
     return Padding(
       padding: EdgeInsets.symmetric(
         horizontal: context.responsive.spacingMd,
         vertical: context.responsive.spacingSm,
       ),
-      child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-            color: sectionColor.withValues(alpha: 0.3),
-            width: 2,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.grey.shade800
+                : Colors.grey.shade100,
+            width: 1,
           ),
         ),
         child: Column(
@@ -508,36 +623,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           children: [
             Padding(
               padding: EdgeInsets.fromLTRB(
-                context.responsive.spacingMd,
-                context.responsive.spacingMd,
-                context.responsive.spacingMd,
+                context.responsive.spacingLg,
+                context.responsive.spacingLg,
+                context.responsive.spacingLg,
                 context.responsive.spacingSm,
               ),
-              child: Row(
-                children: [
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: sectionColor,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.0,
-                    ),
-                  ),
-                  if (showCompletion) ...[
-                    const Spacer(),
-                    Text(
-                      '${(completion * 100).toInt()}%',
-                      style: TextStyle(
-                        color: sectionColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ],
+              child: Text(
+                title,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: sectionColor,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
               ),
             ),
             ...items,
+            SizedBox(height: context.responsive.spacingSm),
           ],
         ),
       ),
@@ -555,52 +656,104 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     bool showBadge = false,
     required VoidCallback onTap,
   }) {
+    return _buildPremiumItem(
+      context,
+      icon: icon,
+      title: title,
+      subtitle: subtitle,
+      trailing: trailing,
+      titleColor: titleColor,
+      iconColor: iconColor,
+      showBadge: showBadge,
+      onTap: onTap,
+    );
+  }
+
+  Widget _buildPremiumItem(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    Widget? trailing,
+    Color? titleColor,
+    Color? iconColor,
+    bool showBadge = false,
+    required VoidCallback onTap,
+  }) {
     final effectiveIconColor =
         iconColor ?? titleColor ?? Theme.of(context).iconTheme.color;
 
-    return ListTile(
-      leading: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: effectiveIconColor?.withValues(alpha: 0.12),
-          shape: BoxShape.circle,
-        ),
-        child: Center(child: FaIcon(icon, size: 20, color: effectiveIconColor)),
-      ),
-      title: Row(
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              style: TextStyle(fontWeight: FontWeight.w500, color: titleColor),
-            ),
-          ),
-          if (showBadge)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.3),
-                ),
-              ),
-              child: Text(
-                '!',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-        ],
-      ),
-      subtitle: subtitle != null ? Text(subtitle) : null,
-      trailing:
-          trailing ?? Icon(Icons.chevron_right, color: Colors.grey.shade400),
+    return InkWell(
       onTap: onTap,
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: context.responsive.spacingLg,
+          vertical: context.responsive.spacingMd,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: effectiveIconColor?.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Center(
+                child: FaIcon(icon, size: 18, color: effectiveIconColor),
+              ),
+            ),
+            SizedBox(width: context.responsive.spacingMd),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: titleColor,
+                        ),
+                      ),
+                      if (showBadge) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            trailing ??
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 14,
+                  color: Colors.grey.shade400,
+                ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -778,11 +931,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         try {
           await PinService().removePin();
           await ref.read(pinLockProvider.notifier).refresh();
-          if (mounted) {
+          if (context.mounted) {
             FeedbackService.showSuccess(context, 'PIN lock disabled');
           }
         } catch (e) {
-          if (mounted) {
+          if (context.mounted) {
             FeedbackService.showError(context, e);
           }
         }
@@ -825,6 +978,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
+  /*
   void _showAppearanceDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -882,6 +1036,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
     );
   }
+  */
 
   void _showExportDataDialog(BuildContext context) {
     showDialog(
@@ -1016,9 +1171,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (!context.mounted) return;
       Navigator.pop(context);
 
-      // Navigate to auth (will show login)
+      // Show success feedback
       if (!context.mounted) return;
-      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+      FeedbackService.showSuccess(
+        context,
+        'Account deleted successfully. We\'re sorry to see you go!',
+      );
+
+      // Wait a moment for user to see the feedback
+      await Future.delayed(const Duration(milliseconds: 1500));
+
+      // Navigate to login screen
+      if (!context.mounted) return;
+      Navigator.of(
+        context,
+      ).pushNamedAndRemoveUntil(AppRoutes.login, (route) => false);
     } catch (e) {
       if (context.mounted && Navigator.of(context).canPop()) {
         Navigator.pop(context);

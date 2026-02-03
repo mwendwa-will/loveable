@@ -7,7 +7,6 @@ import 'package:lovely/widgets/home/week_strip.dart';
 import 'package:lovely/widgets/home/cycle_card.dart';
 import 'package:lovely/widgets/home/daily_tip_card.dart';
 import 'package:lovely/services/auth_service.dart';
-import 'package:lovely/core/feedback/feedback_service.dart';
 import 'package:lovely/widgets/email_verification_banner.dart';
 import 'package:lovely/widgets/day_detail_bottom_sheet.dart';
 import 'package:lovely/services/pin_service.dart';
@@ -47,59 +46,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => DayDetailBottomSheet(date: date),
-    );
-  }
-
-  void _showVerificationDialog() {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: colorScheme.tertiary),
-            const SizedBox(width: 12),
-            const Expanded(child: Text('Let\'s verify your email')),
-          ],
-        ),
-        content: const Text(
-          'To keep your wellness journey secure and help you recover your account if needed, we\'d love for you to verify your email. It only takes a moment!',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              // Dismiss for now
-              ref
-                  .read(homeViewModelProvider.notifier)
-                  .setVerificationRequired(false);
-              Navigator.of(context).pop();
-            },
-            child: const Text('Maybe later'),
-          ),
-          FilledButton.icon(
-            onPressed: () async {
-              try {
-                await AuthService().resendVerificationEmail();
-                if (context.mounted) {
-                  Navigator.of(context).pop();
-                  FeedbackService.showSuccess(
-                    context,
-                    'Check your inbox! Verification email is on its way',
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  FeedbackService.showError(context, e);
-                }
-              }
-            },
-            icon: const Icon(Icons.email_outlined, size: 18),
-            label: const Text('Send Verification Email'),
-          ),
-        ],
-      ),
     );
   }
 
