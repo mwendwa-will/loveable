@@ -216,14 +216,12 @@ Container(
   padding: EdgeInsets.all(_getResponsiveSize(context, 16)),
   decoration: BoxDecoration(
     color: Theme.of(context).cardColor,
-    borderRadius: BorderRadius.circular(_getResponsiveSize(context, 16)),
+    borderRadius: BorderRadius.circular(_getResponsiveSize(context, 24)), // Increased for premium feel
     boxShadow: [
       BoxShadow(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? Colors.black.withValues(alpha: 0.12)
-            : Colors.black.withValues(alpha: 0.08),
-        blurRadius: 4,
-        offset: const Offset(0, 1),
+        color: Colors.black.withValues(alpha: 0.04),
+        blurRadius: 10,
+        offset: const Offset(0, 4),
       ),
     ],
   ),
@@ -231,22 +229,41 @@ Container(
 )
 ```
 
+#### Premium Glassmorphism (Overlays)
+For a "premium" feel, use semi-transparent overlays on top of gradients:
+```dart
+Container(
+  decoration: BoxDecoration(
+    color: Colors.white.withValues(alpha: 0.1),
+    borderRadius: BorderRadius.circular(24),
+    border: Border.all(
+      color: Colors.white.withValues(alpha: 0.2),
+      width: 1.5,
+    ),
+  ),
+  child: BackdropFilter(
+    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+    child: // Content
+  ),
+)
+```
+
 **Material 3 Shadow Rules:**
-- **Light mode**: `Colors.black.withValues(alpha: 0.08)` blur 4, offset (0, 1)
-- **Dark mode**: `Colors.black.withValues(alpha: 0.12)` blur 4, offset (0, 1)
-- Creates subtle elevation without harsh shadows
+- **Elevated**: `offset(0, 4), blur 10, alpha 0.04` (Subtle, modern depth)
+- **Layered**: Use multiple shadows for a "lifted" effect on hero cards.
+- **Surface**: Use gradients + glass overlays for dashboard headers.
 
 #### Dark Hero Card (with Gradient)
 ```dart
 Container(
   decoration: BoxDecoration(
-    gradient: AppColors.calendarGradient,
-    borderRadius: BorderRadius.circular(_getResponsiveSize(context, 20)),
+    gradient: AppColors.primaryGradient,
+    borderRadius: BorderRadius.circular(_getResponsiveSize(context, 24)),
     boxShadow: [
       BoxShadow(
-        color: AppColors.primary.withValues(alpha: 0.12),
-        blurRadius: 4,
-        offset: const Offset(0, 1),
+        color: AppColors.primary.withValues(alpha: 0.2),
+        blurRadius: 20,
+        offset: const Offset(0, 8),
       ),
     ],
   ),
