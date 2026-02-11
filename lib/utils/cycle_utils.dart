@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lovely/constants/app_colors.dart';
+import 'package:lunara/constants/app_colors.dart';
 
 /// Centralized cycle calculation utilities
 /// Used by both the calendar screen and home screen week strip

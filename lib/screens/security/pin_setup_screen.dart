@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:lovely/services/pin_service.dart';
-import 'package:lovely/constants/app_colors.dart';
-import 'package:lovely/utils/responsive_utils.dart';
-import 'package:lovely/core/feedback/feedback_service.dart';
+import 'package:lunara/services/pin_service.dart';
+import 'package:lunara/constants/app_colors.dart';
+import 'package:lunara/utils/responsive_utils.dart';
+import 'package:lunara/core/feedback/feedback_service.dart';
 
 class PinSetupScreen extends StatefulWidget {
   final bool isChangeMode;

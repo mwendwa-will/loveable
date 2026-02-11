@@ -2,14 +2,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:lovely/screens/auth/forgot_password.dart';
-import 'package:lovely/providers/period_provider.dart';
-import 'package:lovely/services/auth_service.dart';
-import 'package:lovely/services/profile_service.dart';
-import 'package:lovely/screens/onboarding/onboarding_screen.dart';
-import 'package:lovely/screens/main/home_screen.dart';
-import 'package:lovely/navigation/app_router.dart';
-import 'package:lovely/core/feedback/feedback_service.dart';
+import 'package:lunara/screens/auth/forgot_password.dart';
+import 'package:lunara/providers/period_provider.dart';
+import 'package:lunara/services/auth_service.dart';
+import 'package:lunara/services/profile_service.dart';
+import 'package:lunara/screens/onboarding/onboarding_screen.dart';
+import 'package:lunara/screens/main/home_screen.dart';
+import 'package:lunara/navigation/app_router.dart';
+import 'package:lunara/core/feedback/feedback_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});

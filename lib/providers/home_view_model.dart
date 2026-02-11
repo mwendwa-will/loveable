@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lovely/models/period.dart';
-import 'package:lovely/repositories/period_repository.dart';
-import 'package:lovely/repositories/user_repository.dart';
+import 'package:lunara/models/period.dart';
+import 'package:lunara/repositories/period_repository.dart';
+import 'package:lunara/repositories/user_repository.dart';
 import 'package:flutter/foundation.dart';
-import 'package:lovely/repositories/auth_repository.dart';
-import 'package:lovely/services/notification_service.dart';
+import 'package:lunara/repositories/auth_repository.dart';
+import 'package:lunara/services/notification_service.dart';
 
 // State class for Home Screen
 class HomeState {

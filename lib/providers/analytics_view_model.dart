@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lovely/models/period.dart';
-import 'package:lovely/repositories/period_repository.dart';
+import 'package:lunara/models/period.dart';
+import 'package:lunara/repositories/period_repository.dart';
 
 // State class
 class AnalyticsState {

@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lovely/models/period.dart';
-import 'package:lovely/models/mood.dart';
-import 'package:lovely/models/symptom.dart';
-import 'package:lovely/models/sexual_activity.dart';
-import 'package:lovely/models/note.dart';
+import 'package:lunara/models/period.dart';
+import 'package:lunara/models/mood.dart';
+import 'package:lunara/models/symptom.dart';
+import 'package:lunara/models/sexual_activity.dart';
+import 'package:lunara/models/note.dart';
 
 void main() {
   group('Period Model', () {

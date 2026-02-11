@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lovely/services/pin_service.dart';
+import 'package:lunara/services/pin_service.dart';
 
 // Simple in-memory fake storage implementing the minimal API used by PinService
 class FakeStorage implements SecureStorageInterface {

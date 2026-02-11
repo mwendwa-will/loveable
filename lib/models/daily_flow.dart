@@ -1,4 +1,4 @@
-import 'package:lovely/models/period.dart';
+import 'package:lunara/models/period.dart';
 
 class DailyFlow {
   final String id;

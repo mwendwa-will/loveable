@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:lovely/models/mood.dart';
-import 'package:lovely/models/symptom.dart';
-import 'package:lovely/models/sexual_activity.dart';
-import 'package:lovely/models/note.dart';
-import 'package:lovely/providers/daily_log_provider.dart';
-import 'package:lovely/providers/period_provider.dart';
-import 'package:lovely/navigation/app_router.dart';
+import 'package:lunara/models/mood.dart';
+import 'package:lunara/models/symptom.dart';
+import 'package:lunara/models/sexual_activity.dart';
+import 'package:lunara/models/note.dart';
+import 'package:lunara/providers/daily_log_provider.dart';
+import 'package:lunara/providers/period_provider.dart';
+import 'package:lunara/navigation/app_router.dart';
 
 /// Bottom sheet showing full day details when tapping a date
 class DayDetailBottomSheet extends ConsumerWidget {

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
-import 'package:lovely/services/auth_service.dart';
-import 'package:lovely/services/profile_service.dart';
-import 'package:lovely/services/period_service.dart';
-import 'package:lovely/services/cycle_analyzer.dart';
-import 'package:lovely/navigation/app_router.dart';
-import 'package:lovely/models/period.dart';
-import 'package:lovely/core/feedback/feedback_service.dart';
-import 'package:lovely/core/exceptions/app_exceptions.dart';
+import 'package:lunara/services/auth_service.dart';
+import 'package:lunara/services/profile_service.dart';
+import 'package:lunara/services/period_service.dart';
+import 'package:lunara/services/cycle_analyzer.dart';
+import 'package:lunara/navigation/app_router.dart';
+import 'package:lunara/models/period.dart';
+import 'package:lunara/core/feedback/feedback_service.dart';
+import 'package:lunara/core/exceptions/app_exceptions.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});

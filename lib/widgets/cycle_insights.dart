@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lovely/providers/period_provider.dart';
+import 'package:lunara/providers/period_provider.dart';
 
 /// CycleInsights Widget
 /// Shows users when their cycle pattern has shifted (e.g., became longer/shorter)

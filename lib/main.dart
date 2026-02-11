@@ -6,21 +6,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:lovely/constants/app_colors.dart';
-import 'package:lovely/screens/auth/auth_gate.dart';
-import 'package:lovely/screens/security/pin_unlock_screen.dart';
-import 'package:lovely/services/auth_service.dart';
-import 'package:lovely/services/notification_service.dart';
-import 'package:lovely/services/pin_service.dart';
-import 'package:lovely/providers/pin_lock_provider.dart';
+import 'package:lunara/constants/app_colors.dart';
+import 'package:lunara/screens/auth/auth_gate.dart';
+import 'package:lunara/screens/security/pin_unlock_screen.dart';
+import 'package:lunara/services/auth_service.dart';
+import 'package:lunara/services/notification_service.dart';
+import 'package:lunara/services/pin_service.dart';
+import 'package:lunara/services/subscription_service.dart';
+import 'package:lunara/providers/pin_lock_provider.dart';
+import 'package:lunara/providers/subscription_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:supabase_auth_ui/supabase_auth_ui.dart';
 import 'firebase_options.dart';
-import 'package:lovely/services/supabase_service.dart';
-import 'package:lovely/navigation/app_router.dart';
-import 'package:lovely/core/feedback/feedback_service.dart';
+import 'package:lunara/services/supabase_service.dart';
+import 'package:lunara/navigation/app_router.dart';
+import 'package:lunara/core/feedback/feedback_service.dart';
 import 'package:app_links/app_links.dart';
-import 'package:lovely/providers/entitlements.dart';
+import 'package:lunara/providers/entitlements.dart';
 
 void main() {
   // Run the app inside a guarded zone. Ensure bindings and runApp occur
@@ -84,6 +86,15 @@ Future<void> _bootstrapAndRunApp() async {
   } catch (e, stack) {
     debugPrint('Error during Supabase init: $e');
     debugPrint('Stack: $stack');
+  }
+
+  // Initialize SubscriptionService (RevenueCat)
+  try {
+    debugPrint('Initializing SubscriptionService...');
+    await SubscriptionService().initialize();
+    debugPrint('SubscriptionService initialized');
+  } catch (e) {
+    debugPrint('Warning: SubscriptionService initialization failed: $e');
   }
 
   debugPrint('Launching app...');
@@ -235,10 +246,23 @@ class _LovelyAppState extends ConsumerState<LovelyApp>
         ref.read(pinLockProvider.notifier).lock();
       }
     } else if (state == AppLifecycleState.resumed) {
+      // Refresh subscription state when app resumes
+      _refreshSubscriptionState();
+      
       // App returned to foreground - check timeout first
       if (pinState.isLocked && pinState.isEnabled) {
         _checkTimeoutAndShowPinOrLogout();
       }
+    }
+  }
+
+  void _refreshSubscriptionState() {
+    try {
+      // Refresh subscription provider to check for changes
+      ref.invalidate(subscriptionProvider);
+      debugPrint('Subscription state refreshed on app resume');
+    } catch (e) {
+      debugPrint('Warning: Failed to refresh subscription state: $e');
     }
   }
 
@@ -303,14 +327,29 @@ class _LovelyAppState extends ConsumerState<LovelyApp>
 
   void _setupAuthListener() {
     // Listen for auth state changes (including email verification)
-    SupabaseService().client.auth.onAuthStateChange.listen((data) {
+    SupabaseService().client.auth.onAuthStateChange.listen((data) async {
       final event = data.event;
+      final session = data.session;
       debugPrint('Auth event: $event');
 
-      if (event == AuthChangeEvent.signedIn) {
+      if (event == AuthChangeEvent.signedIn && session?.user != null) {
         debugPrint('User signed in - email verified');
-        // User has verified their email and signed in
-        // AuthGate will automatically handle navigation
+        // Initialize subscription for this user
+        try {
+          await SubscriptionService().login(session!.user.id);
+          debugPrint('SubscriptionService logged in for user: ${session.user.id}');
+        } catch (e) {
+          debugPrint('Warning: SubscriptionService login failed: $e');
+        }
+      } else if (event == AuthChangeEvent.signedOut) {
+        debugPrint('User signed out');
+        // Clean up subscription state
+        try {
+          await SubscriptionService().logout();
+          debugPrint('SubscriptionService logged out');
+        } catch (e) {
+          debugPrint('Warning: SubscriptionService logout failed: $e');
+        }
       } else if (event == AuthChangeEvent.tokenRefreshed) {
         debugPrint('Token refreshed');
       }

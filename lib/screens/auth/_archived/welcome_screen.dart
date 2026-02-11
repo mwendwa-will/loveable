@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:lovely/constants/app_colors.dart';
-import 'package:lovely/screens/auth/login.dart';
-import 'package:lovely/screens/auth/signup.dart';
-import 'package:lovely/navigation/app_router.dart';
+import 'package:lunara/constants/app_colors.dart';
+import 'package:lunara/screens/auth/login.dart';
+import 'package:lunara/screens/auth/signup.dart';
+import 'package:lunara/navigation/app_router.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});

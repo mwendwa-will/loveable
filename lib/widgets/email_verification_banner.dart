@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:lovely/services/auth_service.dart';
-import 'package:lovely/core/feedback/feedback_service.dart';
+import 'package:lunara/services/auth_service.dart';
+import 'package:lunara/core/feedback/feedback_service.dart';
 
 class EmailVerificationBanner extends StatefulWidget {
   const EmailVerificationBanner({super.key});

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lovely/providers/notification_provider.dart';
-import 'package:lovely/constants/app_colors.dart';
-import 'package:lovely/utils/responsive_utils.dart';
+import 'package:lunara/providers/notification_provider.dart';
+import 'package:lunara/constants/app_colors.dart';
+import 'package:lunara/utils/responsive_utils.dart';
 
 class NotificationsSettingsDialog extends ConsumerWidget {
   const NotificationsSettingsDialog({super.key});

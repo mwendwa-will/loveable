@@ -5,6 +5,10 @@ import '../../services/profile_service.dart';
 import '../../services/cycle_analyzer.dart';
 import '../../constants/app_colors.dart';
 import '../../core/feedback/feedback_service.dart';
+import '../../providers/subscription_provider.dart';
+import '../../widgets/premium_feature_gate.dart';
+import '../../widgets/upgrade_sheet.dart';
+import '../../utils/responsive_utils.dart';
 
 /// Settings screen where users can adjust cycle information
 /// Allows editing cycle length, period length, and viewing prediction accuracy
@@ -106,11 +110,13 @@ class _CycleSettingsScreenState extends ConsumerState<CycleSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isPremium = ref.watch(isPremiumProvider);
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Cycle Settings'),
         actions: [
-          if (!_isLoading)
+          if (!_isLoading && isPremium)
             TextButton.icon(
               onPressed: _isSaving ? null : _saveSettings,
               icon: _isSaving
@@ -127,22 +133,159 @@ class _CycleSettingsScreenState extends ConsumerState<CycleSettingsScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(context.responsive.spacingMd),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // View-only info cards (always visible)
+                  _buildCurrentCycleLengthCard(),
+                  SizedBox(height: context.responsive.spacingMd),
+                  _buildCurrentPeriodLengthCard(),
+                  SizedBox(height: context.responsive.spacingMd),
+                  
+                  // Premium banner for free users
+                  if (!isPremium) ...[
+                    _buildPremiumBanner(),
+                    SizedBox(height: context.responsive.spacingMd),
+                  ],
+                  
+                  // Editable section (gated for premium)
+                  PremiumFeatureGate(
+                    feature: PremiumFeature.editCycleSettings,
+                    featureName: 'Cycle Settings',
+                    showLockedOverlay: false,
+                    child: Column(
+                      children: [
+                        _buildCycleLengthSection(),
+                        SizedBox(height: context.responsive.spacingMd),
+                        _buildPeriodLengthSection(),
+                        SizedBox(height: context.responsive.spacingMd),
+                        _buildLastPeriodSection(),
+                      ],
+                    ),
+                  ),
+                  
+                  SizedBox(height: context.responsive.spacingMd),
                   _buildPredictionAccuracyCard(),
-                  const SizedBox(height: 24),
-                  _buildCycleLengthSection(),
-                  const SizedBox(height: 24),
-                  _buildPeriodLengthSection(),
-                  const SizedBox(height: 24),
-                  _buildLastPeriodSection(),
-                  const SizedBox(height: 24),
+                  SizedBox(height: context.responsive.spacingMd),
                   _buildInfoCard(),
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _buildCurrentCycleLengthCard() {
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(context.responsive.spacingMd),
+        child: Row(
+          children: [
+            Icon(
+              Icons.calendar_today_rounded,
+              color: Theme.of(context).colorScheme.primary,
+              size: context.responsive.iconSize,
+            ),
+            SizedBox(width: context.responsive.spacingSm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Current Cycle Length',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  SizedBox(height: context.responsive.spacingXs),
+                  Text(
+                    '$_cycleLength days',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCurrentPeriodLengthCard() {
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(context.responsive.spacingMd),
+        child: Row(
+          children: [
+            Icon(
+              Icons.water_drop_rounded,
+              color: Theme.of(context).colorScheme.primary,
+              size: context.responsive.iconSize,
+            ),
+            SizedBox(width: context.responsive.spacingSm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Average Period Length',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  SizedBox(height: context.responsive.spacingXs),
+                  Text(
+                    '$_periodLength days',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumBanner() {
+    return Container(
+      padding: EdgeInsets.all(context.responsive.spacingMd),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).colorScheme.primaryContainer,
+            Theme.of(context).colorScheme.tertiaryContainer,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.workspace_premium_rounded,
+            color: Theme.of(context).colorScheme.primary,
+            size: context.responsive.iconSize * 1.5,
+          ),
+          SizedBox(height: context.responsive.spacingSm),
+          Text(
+            'Upgrade to customize your cycle settings',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: context.responsive.spacingMd),
+          FilledButton.tonal(
+            onPressed: () => UpgradeSheet.show(
+              context,
+              featureName: 'Cycle Settings',
+            ),
+            child: const Text('Unlock Premium'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -233,15 +376,25 @@ class _CycleSettingsScreenState extends ConsumerState<CycleSettingsScreen> {
   Widget _buildCycleLengthSection() {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(context.responsive.spacingMd),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Average Cycle Length',
-              style: Theme.of(context).textTheme.titleMedium,
+            Row(
+              children: [
+                Icon(
+                  Icons.tune_rounded,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 20,
+                ),
+                SizedBox(width: context.responsive.spacingSm),
+                Text(
+                  'Cycle Length',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: context.responsive.spacingSm),
             Text(
               'Days from period start to next period start',
               style: Theme.of(context)
@@ -249,7 +402,7 @@ class _CycleSettingsScreenState extends ConsumerState<CycleSettingsScreen> {
                   .bodySmall
                   ?.copyWith(color: AppColors.getTextSecondaryColor(context)),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: context.responsive.spacingMd),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -291,15 +444,25 @@ class _CycleSettingsScreenState extends ConsumerState<CycleSettingsScreen> {
   Widget _buildPeriodLengthSection() {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(context.responsive.spacingMd),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Average Period Length',
-              style: Theme.of(context).textTheme.titleMedium,
+            Row(
+              children: [
+                Icon(
+                  Icons.edit_rounded,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 20,
+                ),
+                SizedBox(width: context.responsive.spacingSm),
+                Text(
+                  'Period Length',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: context.responsive.spacingSm),
             Text(
               'Number of days you typically bleed',
               style: Theme.of(context)
@@ -307,7 +470,7 @@ class _CycleSettingsScreenState extends ConsumerState<CycleSettingsScreen> {
                   .bodySmall
                   ?.copyWith(color: AppColors.getTextSecondaryColor(context)),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: context.responsive.spacingMd),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -349,15 +512,25 @@ class _CycleSettingsScreenState extends ConsumerState<CycleSettingsScreen> {
   Widget _buildLastPeriodSection() {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(context.responsive.spacingMd),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Last Period Start Date',
-              style: Theme.of(context).textTheme.titleMedium,
+            Row(
+              children: [
+                Icon(
+                  Icons.science_rounded,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 20,
+                ),
+                SizedBox(width: context.responsive.spacingSm),
+                Text(
+                  'Last Period Start Date',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: context.responsive.spacingSm),
             Text(
               'Update this if you made a mistake during onboarding',
               style: Theme.of(context)
@@ -365,7 +538,7 @@ class _CycleSettingsScreenState extends ConsumerState<CycleSettingsScreen> {
                   .bodySmall
                   ?.copyWith(color: AppColors.getTextSecondaryColor(context)),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: context.responsive.spacingMd),
             ListTile(
               leading: const Icon(Icons.calendar_today),
               title: Text(

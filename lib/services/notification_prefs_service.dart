@@ -1,4 +1,4 @@
-import 'package:lovely/services/supabase_service.dart';
+import 'package:lunara/services/supabase_service.dart';
 
 class NotificationPrefsService {
   static final NotificationPrefsService _instance = NotificationPrefsService._internal();

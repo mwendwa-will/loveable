@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:lovely/screens/auth/welcome_screen.dart';
-import 'package:lovely/screens/auth/login.dart';
-import 'package:lovely/screens/auth/signup.dart';
-import 'package:lovely/screens/auth/forgot_password.dart';
-import 'package:lovely/screens/onboarding/onboarding_screen.dart';
-import 'package:lovely/screens/main/home_screen.dart';
-import 'package:lovely/screens/main/profile_screen.dart';
-import 'package:lovely/screens/calendar_screen.dart';
-import 'package:lovely/screens/daily_log_screen_v2.dart';
-import 'package:lovely/screens/settings/edit_profile_screen.dart';
-import 'package:lovely/screens/settings/change_password_screen.dart';
-import 'package:lovely/screens/settings/notifications_settings_screen.dart';
-import 'package:lovely/screens/settings/cycle_settings_screen.dart';
-import 'package:lovely/screens/security/pin_setup_screen.dart';
-import 'package:lovely/screens/security/pin_unlock_screen.dart';
-import 'package:lovely/screens/analytics/analytics_screen.dart';
-import 'package:lovely/screens/analytics/cycle_history_screen.dart';
+import 'package:lunara/screens/auth/welcome_screen.dart';
+import 'package:lunara/screens/auth/login.dart';
+import 'package:lunara/screens/auth/signup.dart';
+import 'package:lunara/screens/auth/forgot_password.dart';
+import 'package:lunara/screens/onboarding/onboarding_screen.dart';
+import 'package:lunara/screens/main/home_screen.dart';
+import 'package:lunara/screens/main/profile_screen.dart';
+import 'package:lunara/screens/calendar_screen.dart';
+import 'package:lunara/screens/daily_log_screen_v2.dart';
+import 'package:lunara/screens/settings/edit_profile_screen.dart';
+import 'package:lunara/screens/settings/change_password_screen.dart';
+import 'package:lunara/screens/settings/notifications_settings_screen.dart';
+import 'package:lunara/screens/settings/cycle_settings_screen.dart';
+import 'package:lunara/screens/security/pin_setup_screen.dart';
+import 'package:lunara/screens/security/pin_unlock_screen.dart';
+import 'package:lunara/screens/analytics/analytics_screen.dart';
+import 'package:lunara/screens/analytics/cycle_history_screen.dart';
 
 /// Centralized route names used across the app.
 abstract class AppRoutes {

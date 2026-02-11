@@ -3,8 +3,8 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
-import 'package:lovely/core/exceptions/app_exceptions.dart';
-import 'package:lovely/services/supabase_service.dart';
+import 'package:lunara/core/exceptions/app_exceptions.dart';
+import 'package:lunara/services/supabase_service.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(SupabaseService().client);

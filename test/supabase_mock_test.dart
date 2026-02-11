@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:lovely/services/supabase_service.dart';
+import 'package:lunara/services/supabase_service.dart';
 
 // 1. Create a tiny fake SupabaseClient that only exposes `auth`.
 class FakeSupabaseClient implements SupabaseClient {

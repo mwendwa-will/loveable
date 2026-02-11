@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lovely/models/symptom.dart';
-import 'package:lovely/widgets/symptom_picker.dart';
+import 'package:lunara/models/symptom.dart';
+import 'package:lunara/widgets/symptom_picker.dart';
 
 void main() {
   group('SymptomPicker', () {

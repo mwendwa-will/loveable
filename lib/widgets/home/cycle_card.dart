@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lovely/models/period.dart';
-import 'package:lovely/constants/app_colors.dart';
-import 'package:lovely/navigation/app_router.dart';
-import 'package:lovely/widgets/home/cycle_progress_circle.dart';
+import 'package:lunara/models/period.dart';
+import 'package:lunara/constants/app_colors.dart';
+import 'package:lunara/navigation/app_router.dart';
+import 'package:lunara/widgets/home/cycle_progress_circle.dart';
 
 class CycleCard extends StatelessWidget {
   final Period? currentPeriod;
@@ -150,8 +150,12 @@ class CycleCard extends StatelessWidget {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.1),
+                      color: statusColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: statusColor.withValues(alpha: 0.3),
+                        width: 1,
+                      ),
                     ),
                     child: Text(
                       statusText,

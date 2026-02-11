@@ -5,14 +5,14 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
-import 'package:lovely/config/supabase_config.dart';
-import 'package:lovely/models/period.dart';
-import 'package:lovely/models/symptom.dart';
-import 'package:lovely/models/mood.dart';
-import 'package:lovely/models/sexual_activity.dart';
-import 'package:lovely/models/note.dart';
-import 'package:lovely/core/exceptions/app_exceptions.dart';
-import 'package:lovely/services/cycle_analyzer.dart';
+import 'package:lunara/config/supabase_config.dart';
+import 'package:lunara/models/period.dart';
+import 'package:lunara/models/symptom.dart';
+import 'package:lunara/models/mood.dart';
+import 'package:lunara/models/sexual_activity.dart';
+import 'package:lunara/models/note.dart';
+import 'package:lunara/core/exceptions/app_exceptions.dart';
+import 'package:lunara/services/cycle_analyzer.dart';
 
 class SupabaseService {
   // Singleton instance

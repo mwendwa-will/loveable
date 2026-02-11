@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lovely/models/period.dart';
-import 'package:lovely/services/supabase_service.dart';
-import 'package:lovely/services/period_service.dart';
-import 'package:lovely/services/profile_service.dart';
-import 'package:lovely/services/health_service.dart';
-import 'package:lovely/services/auth_service.dart';
+import 'package:lunara/models/period.dart';
+import 'package:lunara/services/supabase_service.dart';
+import 'package:lunara/services/period_service.dart';
+import 'package:lunara/services/profile_service.dart';
+import 'package:lunara/services/health_service.dart';
+import 'package:lunara/services/auth_service.dart';
 
 // Provider for SupabaseService (deprecated - prefer domain services)
 final supabaseServiceProvider = Provider<SupabaseService>((ref) {

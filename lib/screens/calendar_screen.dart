@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:lovely/constants/app_colors.dart';
-import 'package:lovely/providers/calendar_provider.dart';
-import 'package:lovely/navigation/app_router.dart';
-import 'package:lovely/widgets/calendar/daily_log_preview.dart';
-import 'package:lovely/widgets/calendar/dashed_circle_painter.dart';
+import 'package:lunara/constants/app_colors.dart';
+import 'package:lunara/providers/calendar_provider.dart';
+import 'package:lunara/navigation/app_router.dart';
+import 'package:lunara/widgets/calendar/daily_log_preview.dart';
+import 'package:lunara/widgets/calendar/dashed_circle_painter.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({super.key});

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lovely/providers/calendar_provider.dart';
+import 'package:lunara/providers/calendar_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lovely/models/period.dart';
-import 'package:lovely/constants/app_colors.dart';
+import 'package:lunara/models/period.dart';
+import 'package:lunara/constants/app_colors.dart';
 import 'package:intl/intl.dart';
-import 'package:lovely/widgets/calendar/dashed_circle_painter.dart';
+import 'package:lunara/widgets/calendar/dashed_circle_painter.dart';
 
 class WeekStrip extends StatefulWidget {
   final DateTime? lastPeriodStart;
@@ -213,7 +213,7 @@ class _WeekStripState extends State<WeekStrip> {
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: isToday ? Colors.transparent : phaseColor,
+                      color: phaseColor,
                       borderRadius: BorderRadius.circular(12),
                       border: isToday
                           ? Border.all(color: colorScheme.primary, width: 2)
@@ -239,11 +239,9 @@ class _WeekStripState extends State<WeekStrip> {
                                     ? Icons.health_and_safety
                                     : Icons.favorite,
                                 size: 10,
-                                color: isToday
-                                    ? colorScheme.primary
-                                    : AppColors.getSexualActivityLogColor(
-                                        context,
-                                      ),
+                                color: AppColors.getSexualActivityLogColor(
+                                  context,
+                                ),
                               ),
                             ),
                           Text(
@@ -251,9 +249,7 @@ class _WeekStripState extends State<WeekStrip> {
                             style: GoogleFonts.inter(
                               fontSize: 10,
                               fontWeight: FontWeight.w500,
-                              color: isToday
-                                  ? colorScheme.onSurface
-                                  : textColor.withValues(alpha: 0.8),
+                              color: textColor.withValues(alpha: 0.8),
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -261,7 +257,7 @@ class _WeekStripState extends State<WeekStrip> {
                             width: 24,
                             height: 24,
                             alignment: Alignment.center,
-                            decoration: isToday
+                            decoration: isToday && phaseColor == null
                                 ? BoxDecoration(
                                     color: colorScheme.primary,
                                     shape: BoxShape.circle,
@@ -274,7 +270,7 @@ class _WeekStripState extends State<WeekStrip> {
                                 fontWeight: (isToday || showDashedCircle)
                                     ? FontWeight.bold
                                     : FontWeight.bold,
-                                color: isToday
+                                color: isToday && phaseColor == null
                                     ? colorScheme.onPrimary
                                     : textColor,
                               ),
@@ -287,9 +283,7 @@ class _WeekStripState extends State<WeekStrip> {
                               child: Icon(
                                 mood.moodType.icon,
                                 size: 10,
-                                color: isToday
-                                    ? colorScheme.primary
-                                    : AppColors.getMoodLogColor(context),
+                                color: AppColors.getMoodLogColor(context),
                               ),
                             ),
                         ],

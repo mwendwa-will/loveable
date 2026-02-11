@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:lovely/models/period.dart';
-import 'package:lovely/services/period_service.dart';
-import 'package:lovely/constants/app_colors.dart';
+import 'package:lunara/models/period.dart';
+import 'package:lunara/services/period_service.dart';
+import 'package:lunara/constants/app_colors.dart';
 
 class CycleHistoryScreen extends ConsumerWidget {
   const CycleHistoryScreen({super.key});

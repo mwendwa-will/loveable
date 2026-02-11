@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lovely/navigation/app_router.dart';
-import 'package:lovely/providers/home_view_model.dart';
-import 'package:lovely/widgets/home/week_strip.dart';
-import 'package:lovely/widgets/home/cycle_card.dart';
-import 'package:lovely/widgets/home/daily_tip_card.dart';
-import 'package:lovely/services/auth_service.dart';
-import 'package:lovely/widgets/email_verification_banner.dart';
-import 'package:lovely/widgets/day_detail_bottom_sheet.dart';
-import 'package:lovely/services/pin_service.dart';
+import 'package:lunara/navigation/app_router.dart';
+import 'package:lunara/providers/home_view_model.dart';
+import 'package:lunara/widgets/home/week_strip.dart';
+import 'package:lunara/widgets/home/cycle_card.dart';
+import 'package:lunara/widgets/home/daily_tip_card.dart';
+import 'package:lunara/services/auth_service.dart';
+import 'package:lunara/widgets/email_verification_banner.dart';
+import 'package:lunara/widgets/trial_banner.dart';
+import 'package:lunara/widgets/day_detail_bottom_sheet.dart';
+import 'package:lunara/services/pin_service.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -136,6 +137,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             padding: EdgeInsets.symmetric(horizontal: 16),
                             child: EmailVerificationBanner(),
                           ),
+
+                        // Trial Banner
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: TrialBanner(),
+                        ),
 
                         // Week Strip
                         WeekStrip(

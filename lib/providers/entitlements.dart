@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lovely/services/entitlements_service.dart';
+import 'package:lunara/services/entitlements_service.dart';
 
 final entitlementsProvider = NotifierProvider<EntitlementsNotifier, List<Map<String, dynamic>>>(() {
   return EntitlementsNotifier();

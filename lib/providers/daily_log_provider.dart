@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lovely/models/mood.dart';
-import 'package:lovely/models/symptom.dart';
-import 'package:lovely/models/sexual_activity.dart';
-import 'package:lovely/models/note.dart';
-import 'package:lovely/providers/period_provider.dart';
+import 'package:lunara/models/mood.dart';
+import 'package:lunara/models/symptom.dart';
+import 'package:lunara/models/sexual_activity.dart';
+import 'package:lunara/models/note.dart';
+import 'package:lunara/providers/period_provider.dart';
 
 // Stream provider for mood for a specific date - auto-disposes when not watched
 final moodStreamProvider = StreamProvider.autoDispose.family<Mood?, DateTime>((

@@ -1,9 +1,9 @@
-import 'package:lovely/services/supabase_service.dart';
-import 'package:lovely/models/mood.dart';
-import 'package:lovely/models/symptom.dart';
-import 'package:lovely/models/sexual_activity.dart';
-import 'package:lovely/models/note.dart';
-import 'package:lovely/repositories/health_repository.dart';
+import 'package:lunara/services/supabase_service.dart';
+import 'package:lunara/models/mood.dart';
+import 'package:lunara/models/symptom.dart';
+import 'package:lunara/models/sexual_activity.dart';
+import 'package:lunara/models/note.dart';
+import 'package:lunara/repositories/health_repository.dart';
 
 /// Wrapper for mood/symptom/note/sexual activity operations
 class HealthService {

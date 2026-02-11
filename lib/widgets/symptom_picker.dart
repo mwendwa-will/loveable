@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:lovely/models/symptom.dart';
-import 'package:lovely/widgets/app_bottom_sheet.dart';
+import 'package:lunara/models/symptom.dart';
+import 'package:lunara/widgets/app_bottom_sheet.dart';
 
 /// Reusable symptom picker widget using bottom sheet
 class SymptomPicker {

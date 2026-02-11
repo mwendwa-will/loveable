@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:lovely/services/supabase_service.dart';
-import 'package:lovely/repositories/auth_repository.dart';
-import 'package:lovely/services/pin_service.dart';
+import 'package:lunara/services/supabase_service.dart';
+import 'package:lunara/repositories/auth_repository.dart';
+import 'package:lunara/services/pin_service.dart';
 
 /// Thin wrapper around AuthRepository for auth-related operations.
 class AuthService {

@@ -96,6 +96,10 @@ class AppColors {
     );
   }
 
+  static Color getPrimaryColor(BuildContext context) {
+    return Theme.of(context).colorScheme.primary;
+  }
+
   // Calendar-specific theme colors
   static Color getPeriodColor(BuildContext context) {
     return getAdaptiveColor(

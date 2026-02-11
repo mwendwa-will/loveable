@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lovely/providers/period_provider.dart';
-import 'package:lovely/providers/daily_log_provider.dart';
-import 'package:lovely/providers/calendar_provider.dart';
-import 'package:lovely/models/mood.dart';
-import 'package:lovely/models/symptom.dart';
-import 'package:lovely/models/sexual_activity.dart';
-import 'package:lovely/models/period.dart';
-import 'package:lovely/models/note.dart';
+import 'package:lunara/providers/period_provider.dart';
+import 'package:lunara/providers/daily_log_provider.dart';
+import 'package:lunara/providers/calendar_provider.dart';
+import 'package:lunara/models/mood.dart';
+import 'package:lunara/models/symptom.dart';
+import 'package:lunara/models/sexual_activity.dart';
+import 'package:lunara/models/period.dart';
+import 'package:lunara/models/note.dart';
 import 'package:intl/intl.dart';
-import 'package:lovely/core/feedback/feedback_service.dart';
-import 'package:lovely/constants/app_colors.dart';
+import 'package:lunara/core/feedback/feedback_service.dart';
+import 'package:lunara/constants/app_colors.dart';
 
 /// Redesigned Daily Log Screen - Minimal taps, inline everything, auto-save
 class DailyLogScreenV2 extends ConsumerStatefulWidget {

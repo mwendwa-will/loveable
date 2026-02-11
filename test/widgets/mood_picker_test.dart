@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lovely/models/mood.dart';
-import 'package:lovely/widgets/mood_picker.dart';
+import 'package:lunara/models/mood.dart';
+import 'package:lunara/widgets/mood_picker.dart';
 
 void main() {
   group('MoodPicker', () {

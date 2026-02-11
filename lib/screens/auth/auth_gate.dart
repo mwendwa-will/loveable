@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lovely/providers/auth_provider.dart';
-import 'package:lovely/screens/main/home_screen.dart';
-import 'package:lovely/screens/onboarding/onboarding_screen.dart';
-import 'package:lovely/screens/auth/welcome_screen.dart';
+import 'package:lunara/providers/auth_provider.dart';
+import 'package:lunara/screens/main/home_screen.dart';
+import 'package:lunara/screens/onboarding/onboarding_screen.dart';
+import 'package:lunara/screens/auth/welcome_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:lovely/services/supabase_service.dart';
+import 'package:lunara/services/supabase_service.dart';
 
 /// AuthGate: Authentication Gateway
 ///

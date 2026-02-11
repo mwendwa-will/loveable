@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lovely/repositories/auth_repository.dart';
+import 'package:lunara/repositories/auth_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Stream provider for real-time auth state changes

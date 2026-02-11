@@ -1,6 +1,6 @@
-import 'package:lovely/services/supabase_service.dart';
+import 'package:lunara/services/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:lovely/repositories/user_repository.dart';
+import 'package:lunara/repositories/user_repository.dart';
 
 /// Wrapper for user/profile related data access
 class ProfileService {

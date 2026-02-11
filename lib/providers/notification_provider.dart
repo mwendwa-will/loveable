@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lovely/services/notification_prefs_service.dart';
+import 'package:lunara/services/notification_prefs_service.dart';
 
 /// Model for notification preferences
 class NotificationPreferences {

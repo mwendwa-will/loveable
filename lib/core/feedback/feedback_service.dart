@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:lovely/widgets/overlay_notification.dart';
-import 'package:lovely/core/exceptions/app_exceptions.dart';
+import 'package:lunara/widgets/overlay_notification.dart';
+import 'package:lunara/core/exceptions/app_exceptions.dart';
 
 /// Modern feedback service for user notifications
 /// Replaces SnackBars with context-aware, accessible feedback

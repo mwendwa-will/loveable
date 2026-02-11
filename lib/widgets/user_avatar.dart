@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lovely/constants/app_colors.dart';
+import 'package:lunara/constants/app_colors.dart';
 
 class UserAvatar extends StatelessWidget {
   final String initials;

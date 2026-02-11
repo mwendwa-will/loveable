@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lovely/services/tip_service.dart';
+import 'package:lunara/services/tip_service.dart';
 
 class DailyTipCard extends ConsumerWidget {
   final int? cycleDay;

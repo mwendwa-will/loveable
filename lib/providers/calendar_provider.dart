@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lovely/models/mood.dart';
-import 'package:lovely/models/symptom.dart';
-import 'package:lovely/models/sexual_activity.dart';
-import 'package:lovely/models/note.dart';
-import 'package:lovely/services/period_service.dart';
-import 'package:lovely/services/cycle_analyzer.dart';
-import 'package:lovely/services/health_service.dart';
-import 'package:lovely/services/supabase_service.dart';
+import 'package:lunara/models/mood.dart';
+import 'package:lunara/models/symptom.dart';
+import 'package:lunara/models/sexual_activity.dart';
+import 'package:lunara/models/note.dart';
+import 'package:lunara/services/period_service.dart';
+import 'package:lunara/services/cycle_analyzer.dart';
+import 'package:lunara/services/health_service.dart';
+import 'package:lunara/services/supabase_service.dart';
 
 // --- State Class ---
 

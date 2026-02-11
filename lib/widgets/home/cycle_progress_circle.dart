@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:lovely/constants/app_colors.dart';
+import 'package:lunara/constants/app_colors.dart';
 
 class CycleProgressCircle extends StatelessWidget {
   final int currentCycleDay;
@@ -133,7 +133,7 @@ class _CycleSegmentPainter extends CustomPainter {
       rect,
       startAngleOffset + follicularStart + (gapAngle / 2),
       follicularSweep - gapAngle,
-      follicularColor.withValues(alpha: 0.4),
+      follicularColor.withValues(alpha: 0.6),
       strokeWidth,
     );
 

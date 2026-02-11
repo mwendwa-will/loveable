@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import 'package:lovely/services/supabase_service.dart';
-import 'package:lovely/models/period.dart';
-import 'package:lovely/repositories/period_repository.dart';
-import 'package:lovely/repositories/user_repository.dart';
+import 'package:lunara/services/supabase_service.dart';
+import 'package:lunara/models/period.dart';
+import 'package:lunara/repositories/period_repository.dart';
+import 'package:lunara/repositories/user_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final periodServiceProvider = Provider<PeriodService>((ref) {

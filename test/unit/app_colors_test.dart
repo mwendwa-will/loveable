@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lovely/constants/app_colors.dart';
+import 'package:lunara/constants/app_colors.dart';
 
 void main() {
   group('AppColors', () {

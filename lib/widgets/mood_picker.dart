@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:lovely/models/mood.dart';
-import 'package:lovely/widgets/app_bottom_sheet.dart';
+import 'package:lunara/models/mood.dart';
+import 'package:lunara/widgets/app_bottom_sheet.dart';
 
 /// Reusable mood picker widget using bottom sheet
 class MoodPicker {

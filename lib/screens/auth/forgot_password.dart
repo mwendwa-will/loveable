@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:lovely/services/auth_service.dart';
-import 'package:lovely/constants/app_colors.dart';
-import 'package:lovely/core/feedback/feedback_service.dart';
+import 'package:lunara/services/auth_service.dart';
+import 'package:lunara/constants/app_colors.dart';
+import 'package:lunara/core/feedback/feedback_service.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});

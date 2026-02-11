@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lovely/providers/entitlements.dart';
+import 'package:lunara/providers/entitlements.dart';
 
 class RestorePurchases extends ConsumerWidget {
   const RestorePurchases({super.key});

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lovely/providers/analytics_view_model.dart';
-import 'package:lovely/widgets/analytics/cycle_history_chart.dart';
-import 'package:lovely/widgets/analytics/period_duration_chart.dart';
-import 'package:lovely/constants/app_colors.dart';
+import 'package:lunara/providers/analytics_view_model.dart';
+import 'package:lunara/widgets/analytics/cycle_history_chart.dart';
+import 'package:lunara/widgets/analytics/period_duration_chart.dart';
+import 'package:lunara/constants/app_colors.dart';
 
 class AnalyticsScreen extends ConsumerStatefulWidget {
   const AnalyticsScreen({super.key});

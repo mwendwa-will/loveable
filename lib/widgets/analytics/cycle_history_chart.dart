@@ -1,7 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:lovely/constants/app_colors.dart';
-import 'package:lovely/models/period.dart';
+import 'package:lunara/constants/app_colors.dart';
+import 'package:lunara/models/period.dart';
 
 class CycleHistoryChart extends StatelessWidget {
   final List<Period> cycles;

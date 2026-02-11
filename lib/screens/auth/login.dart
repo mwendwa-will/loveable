@@ -2,10 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:lovely/navigation/app_router.dart';
-import 'package:lovely/core/feedback/feedback_service.dart';
-import 'package:lovely/services/auth_service.dart';
-import 'package:lovely/services/profile_service.dart';
+import 'package:lunara/navigation/app_router.dart';
+import 'package:lunara/core/feedback/feedback_service.dart';
+import 'package:lunara/services/auth_service.dart';
+import 'package:lunara/services/profile_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 
 class LoginScreen extends ConsumerStatefulWidget {

@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lovely/services/pin_service.dart';
+import 'package:lunara/services/pin_service.dart';
 
 /// State for PIN lock feature
 class PinLockState {

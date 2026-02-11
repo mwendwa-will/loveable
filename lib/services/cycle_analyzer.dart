@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:flutter/foundation.dart';
-import 'package:lovely/services/period_service.dart';
-import 'package:lovely/services/profile_service.dart';
+import 'package:lunara/services/period_service.dart';
+import 'package:lunara/services/profile_service.dart';
 
 /// Engine that performs calculations and predictions. Accepts injected services
 /// to make unit testing possible. The existing `CycleAnalyzer` static helpers

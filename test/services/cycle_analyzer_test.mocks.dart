@@ -5,12 +5,12 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i8;
 
-import 'package:lovely/models/mood.dart' as _i4;
-import 'package:lovely/models/note.dart' as _i6;
-import 'package:lovely/models/period.dart' as _i3;
-import 'package:lovely/models/sexual_activity.dart' as _i5;
-import 'package:lovely/models/symptom.dart' as _i9;
-import 'package:lovely/services/supabase_service.dart' as _i7;
+import 'package:lunara/models/mood.dart' as _i4;
+import 'package:lunara/models/note.dart' as _i6;
+import 'package:lunara/models/period.dart' as _i3;
+import 'package:lunara/models/sexual_activity.dart' as _i5;
+import 'package:lunara/models/symptom.dart' as _i9;
+import 'package:lunara/services/supabase_service.dart' as _i7;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:supabase_flutter/supabase_flutter.dart' as _i2;
 

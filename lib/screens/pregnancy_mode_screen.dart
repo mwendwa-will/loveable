@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:lovely/services/profile_service.dart';
+import 'package:lunara/services/profile_service.dart';
 import 'package:intl/intl.dart';
-import 'package:lovely/core/feedback/feedback_service.dart';
+import 'package:lunara/core/feedback/feedback_service.dart';
 
 class PregnancyModeScreen extends StatefulWidget {
   const PregnancyModeScreen({super.key});

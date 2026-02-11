@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lovely/services/profile_service.dart';
+import 'package:lunara/services/profile_service.dart';
 
 class UserProfile {
   final String firstName;

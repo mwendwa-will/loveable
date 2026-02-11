@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lovely/widgets/app_dialog.dart';
+import 'package:lunara/widgets/app_dialog.dart';
 
 void main() {
   group('AppDialog', () {

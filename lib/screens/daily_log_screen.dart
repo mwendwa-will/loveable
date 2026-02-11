@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lovely/providers/period_provider.dart';
-import 'package:lovely/providers/daily_log_provider.dart';
-import 'package:lovely/models/mood.dart';
-import 'package:lovely/models/symptom.dart';
-import 'package:lovely/models/sexual_activity.dart';
-import 'package:lovely/models/period.dart';
+import 'package:lunara/providers/period_provider.dart';
+import 'package:lunara/providers/daily_log_provider.dart';
+import 'package:lunara/models/mood.dart';
+import 'package:lunara/models/symptom.dart';
+import 'package:lunara/models/sexual_activity.dart';
+import 'package:lunara/models/period.dart';
 import 'package:intl/intl.dart';
-import 'package:lovely/core/feedback/feedback_service.dart';
-import 'package:lovely/widgets/mood_picker.dart';
-import 'package:lovely/widgets/symptom_picker.dart';
-import 'package:lovely/widgets/app_dialog.dart';
+import 'package:lunara/core/feedback/feedback_service.dart';
+import 'package:lunara/widgets/mood_picker.dart';
+import 'package:lunara/widgets/symptom_picker.dart';
+import 'package:lunara/widgets/app_dialog.dart';
 
 class DailyLogScreen extends ConsumerStatefulWidget {
   final DateTime selectedDate;

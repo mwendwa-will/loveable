@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:lovely/services/cycle_analyzer.dart';
-import 'package:lovely/services/supabase_service.dart';
+import 'package:lunara/services/cycle_analyzer.dart';
+import 'package:lunara/services/supabase_service.dart';
 
 /// Integration tests for the complete prediction flow
 /// Tests the user journey from onboarding through predictions to Truth Event

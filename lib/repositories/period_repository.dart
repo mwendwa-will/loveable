@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
-import 'package:lovely/core/exceptions/app_exceptions.dart';
-import 'package:lovely/models/period.dart';
-import 'package:lovely/services/supabase_service.dart';
-import 'package:lovely/services/cycle_analyzer.dart';
-import 'package:lovely/repositories/user_repository.dart';
+import 'package:lunara/core/exceptions/app_exceptions.dart';
+import 'package:lunara/models/period.dart';
+import 'package:lunara/services/supabase_service.dart';
+import 'package:lunara/services/cycle_analyzer.dart';
+import 'package:lunara/repositories/user_repository.dart';
 
 final periodRepositoryProvider = Provider<PeriodRepository>((ref) {
   return PeriodRepository(

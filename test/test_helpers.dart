@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show User, Session;
-import 'package:lovely/services/supabase_service.dart';
+import 'package:lunara/services/supabase_service.dart';
 
 /// Test helpers for registering platform channel mocks and creating
 /// simple fake `User`/`Session` objects for tests.

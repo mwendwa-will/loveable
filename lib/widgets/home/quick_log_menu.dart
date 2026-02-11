@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lovely/navigation/app_router.dart';
+import 'package:lunara/navigation/app_router.dart';
 
 // Note: We'll likely need to pass callbacks or use a provider for saving data
 // For now, this extracts the UI of the bottom sheet

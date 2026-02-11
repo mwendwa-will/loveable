@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lovely/services/cycle_analyzer.dart';
+import 'package:lunara/services/cycle_analyzer.dart';
 
 void main() {
   final engine = CycleAnalyzerEngine();

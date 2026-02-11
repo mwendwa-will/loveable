@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:lovely/models/period.dart';
+import 'package:lunara/models/period.dart';
 
 class ExportService {
   static final ExportService _instance = ExportService._internal();

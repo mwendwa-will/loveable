@@ -2,16 +2,18 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:lovely/services/profile_service.dart';
-import 'package:lovely/services/auth_service.dart';
-import 'package:lovely/services/pin_service.dart';
-import 'package:lovely/services/period_service.dart';
-import 'package:lovely/services/export_service.dart';
-import 'package:lovely/constants/app_colors.dart';
-import 'package:lovely/utils/responsive_utils.dart';
-import 'package:lovely/navigation/app_router.dart';
-import 'package:lovely/core/feedback/feedback_service.dart';
-import 'package:lovely/providers/pin_lock_provider.dart';
+import 'package:lunara/services/profile_service.dart';
+import 'package:lunara/services/auth_service.dart';
+import 'package:lunara/services/pin_service.dart';
+import 'package:lunara/services/period_service.dart';
+import 'package:lunara/services/export_service.dart';
+import 'package:lunara/constants/app_colors.dart';
+import 'package:lunara/utils/responsive_utils.dart';
+import 'package:lunara/navigation/app_router.dart';
+import 'package:lunara/core/feedback/feedback_service.dart';
+import 'package:lunara/providers/pin_lock_provider.dart';
+import 'package:lunara/providers/subscription_provider.dart';
+import 'package:lunara/widgets/upgrade_sheet.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -239,6 +241,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                       ],
                     ),
+
+                    // SUBSCRIPTION Section
+                    _buildSubscriptionSection(context),
 
                     // YOUR WELLNESS Section
                     _buildSection(
@@ -572,6 +577,76 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSubscriptionSection(BuildContext context) {
+    final subscriptionAsync = ref.watch(subscriptionProvider);
+    
+    return subscriptionAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (error, stack) => const SizedBox.shrink(),
+      data: (subscription) {
+        final isPremium = subscription?.isPremium ?? false;
+        final isTrial = subscription?.isTrialActive ?? false;
+        final planName = isPremium ? 'Premium' : 'Free';
+        final trialDisplay = subscription?.trialRemainingDisplay ?? '';
+        
+        return _buildSection(
+          context,
+          title: 'SUBSCRIPTION',
+          sectionColor: const Color(0xFFFFB74D), // Amber
+          items: [
+            _buildListTile(
+              context,
+              icon: isPremium ? FontAwesomeIcons.crown : FontAwesomeIcons.gift,
+              iconColor: const Color(0xFFFFB74D),
+              title: 'Current Plan',
+              subtitle: isTrial 
+                  ? '$planName (Trial: $trialDisplay)' 
+                  : planName,
+              onTap: () {
+                if (!isPremium) {
+                  UpgradeSheet.show(context);
+                }
+              },
+            ),
+            if (!isPremium)
+              _buildListTile(
+                context,
+                icon: FontAwesomeIcons.arrowUp,
+                iconColor: const Color(0xFFFFB74D),
+                title: 'Upgrade to Premium',
+                subtitle: 'Unlock all features',
+                onTap: () {
+                  UpgradeSheet.show(context);
+                },
+              ),
+            _buildListTile(
+              context,
+              icon: FontAwesomeIcons.rotateRight,
+              iconColor: const Color(0xFFFFB74D),
+              title: 'Restore Purchases',
+              subtitle: 'Sync your subscription',
+              onTap: () async {
+                try {
+                  await ref.read(subscriptionProvider.notifier).restore();
+                  if (context.mounted) {
+                    FeedbackService.showSuccess(
+                      context,
+                      'Purchase restored successfully',
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    FeedbackService.showError(context, e);
+                  }
+                }
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 
