@@ -25,7 +25,7 @@ class WelcomeScreen extends StatelessWidget {
               Column(
                 children: [
                   Semantics(
-                    label: 'Lovely app logo',
+                    label: 'Lunara app logo',
                     child: Container(
                       width: 120,
                       height: 120,
@@ -49,7 +49,7 @@ class WelcomeScreen extends StatelessWidget {
 
                   // Welcome Text
                   Text(
-                    'Welcome to Lovely',
+                    'Welcome to Lunara',
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: isDark

@@ -32,7 +32,7 @@ class AuthGate extends ConsumerWidget {
               const CircularProgressIndicator(),
               const SizedBox(height: 16),
               Text(
-                'Loading Lovely...',
+                'Loading Lunara...',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ],
@@ -109,7 +109,7 @@ class _OnboardingGate extends StatelessWidget {
                   const CircularProgressIndicator(),
                   const SizedBox(height: 16),
                   Text(
-                    'Loading Lovely...',
+                    'Loading Lunara...',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],

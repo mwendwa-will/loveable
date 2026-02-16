@@ -60,7 +60,7 @@ class _CycleSettingsScreenState extends ConsumerState<CycleSettingsScreen> {
       }
 
       setState(() {
-        _cycleLength = userData['cycle_length'] as int? ?? 28;
+        _cycleLength = userData['average_cycle_length'] as int? ?? 28;
         _periodLength = userData['period_length'] as int? ?? 5;
         _lastPeriodStart = userData['last_period_start'] != null
             ? DateTime.parse(userData['last_period_start']!)
@@ -81,7 +81,7 @@ class _CycleSettingsScreenState extends ConsumerState<CycleSettingsScreen> {
 
     try {
       await _supabase.updateUserData({
-        'cycle_length': _cycleLength,
+        'average_cycle_length': _cycleLength,
         'period_length': _periodLength,
         if (_lastPeriodStart != null)
           'last_period_start': _lastPeriodStart!.toIso8601String(),

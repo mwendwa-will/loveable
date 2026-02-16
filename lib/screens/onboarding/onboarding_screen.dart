@@ -184,6 +184,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       var username = user.userMetadata?['username'] as String?;
       var firstName = user.userMetadata?['first_name'] as String?;
       var lastName = user.userMetadata?['last_name'] as String?;
+      
+      // For OAuth users, try to extract name from provider metadata
+      if (firstName == null || firstName.isEmpty) {
+        // Try full_name from OAuth providers (Google/Apple)
+        final fullName = user.userMetadata?['full_name'] as String?;
+        final name = user.userMetadata?['name'] as String?;
+        
+        if (fullName != null && fullName.isNotEmpty) {
+          final parts = fullName.split(' ');
+          firstName = parts.first;
+          if (parts.length > 1) {
+            lastName = parts.skip(1).join(' ');
+          }
+        } else if (name != null && name.isNotEmpty) {
+          final parts = name.split(' ');
+          firstName = parts.first;
+          if (parts.length > 1) {
+            lastName = parts.skip(1).join(' ');
+          }
+        }
+      }
 
       debugPrint('Username from metadata: $username');
       debugPrint('First name from metadata: $firstName');
@@ -199,12 +220,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         debugPrint('Username from database: $username');
       }
 
-      // Username is required
+      // If still no username, generate one from email (for OAuth users)
       if (username == null || username.isEmpty) {
-        throw AuthException(
-          'Username not found. Please sign up again.',
-          code: 'AUTH_009',
-        );
+        debugPrint('No username found, generating from email...');
+        final email = user.email;
+        if (email != null && email.isNotEmpty) {
+          // Generate username from email (take part before @)
+          username = email.split('@').first.toLowerCase();
+          // Remove special characters and limit length
+          username = username!.replaceAll(RegExp(r'[^a-z0-9_]'), '_');
+          if (username.length > 15) {
+            username = username.substring(0, 15);
+          }
+          // Add random suffix to avoid collisions
+          final randomSuffix = DateTime.now().millisecondsSinceEpoch % 10000;
+          username = '${username}_$randomSuffix';
+          debugPrint('Generated username: $username');
+        } else {
+          // Fallback to user ID if no email
+          username = 'user_${user.id.substring(0, 8)}';
+          debugPrint('Generated username from ID: $username');
+        }
       }
 
       debugPrint('Saving onboarding data for user: $username');
@@ -398,7 +434,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(height: 32),
 
           Text(
-            'Welcome to Lovely!',
+            'Welcome to Lunara!',
             style: Theme.of(
               context,
             ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),

@@ -75,6 +75,25 @@ The application is structured around a set of "agents," which are specialized co
     -   Manages user's notification preferences.
 -   **Backend Interaction:** Stores FCM tokens in the `users` table and logs notifications in the `notification_logs` table.
 
+### 2.6. Subscription & Monetization Agent
+
+-   **Responsibilities:**
+    -   Manages subscription state and tier enforcement (Free vs Premium).
+    -   Handles 48-hour free trial activation and expiration tracking.
+    -   Integrates with RevenueCat for payment processing and receipt validation.
+    -   Enforces feature gates based on subscription tier.
+    -   Syncs subscription state between RevenueCat and Supabase.
+    -   Manages subscription lifecycle: trial → active → cancelled/expired.
+-   **Data Models:** `Subscription`, `SubscriptionPackage`
+-   **Backend Interaction:** 
+    -   CRUD operations on the `subscriptions` table in Supabase.
+    -   RevenueCat SDK for payment processing and subscription management.
+    -   Webhook integration for real-time subscription event updates.
+-   **Integration with Other Agents:**
+    -   **User & Profile Agent**: Triggers subscription initialization on login, cleanup on logout.
+    -   **Cycle & Health Agent**: Enforces history limits based on subscription tier (3 months for free, unlimited for premium).
+    -   **Affirmation Agent**: Gates custom affirmations behind premium tier.
+
 ---
 
 ## 3. Technology & State Management

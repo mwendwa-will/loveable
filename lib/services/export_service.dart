@@ -42,7 +42,7 @@ class ExportService {
       await SharePlus.instance.share(
         ShareParams(
           files: [XFile(file.path)],
-          text: 'My Lovely cycle data export',
+          text: 'My Lunara cycle data export',
         ),
       );
     } catch (e) {

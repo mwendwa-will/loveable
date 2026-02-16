@@ -184,16 +184,14 @@ class _WeekStripState extends State<WeekStrip> {
                 bool showDashedCircle = false;
 
                 if (isLoggedPeriod) {
-                  phaseColor = AppColors.getMenstrualPhaseColor(context);
+                  phaseColor = AppColors.getPeriodColor(context);
                 } else if (state.ovulationDays.contains(normalizedDate)) {
                   textColor = AppColors.getOvulationDayColor(context);
                   showDashedCircle = true;
                 } else if (state.fertileDays.contains(normalizedDate)) {
                   textColor = AppColors.getFollicularPhaseColor(context);
                 } else if (state.predictedPeriodDays.contains(normalizedDate)) {
-                  phaseColor = AppColors.getLutealPhaseColor(
-                    context,
-                  ).withValues(alpha: 0.3);
+                  phaseColor = AppColors.getPredictedPeriodColor(context);
                 }
 
                 textColor ??= (phaseColor != null
@@ -229,16 +227,17 @@ class _WeekStripState extends State<WeekStrip> {
                           : null,
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           // Intimacy Icon above the day label
                           if (activity != null)
                             Padding(
-                              padding: const EdgeInsets.only(bottom: 2),
+                              padding: const EdgeInsets.only(bottom: 1),
                               child: Icon(
                                 activity.protectionUsed
                                     ? Icons.health_and_safety
                                     : Icons.favorite,
-                                size: 10,
+                                size: 9,
                                 color: AppColors.getSexualActivityLogColor(
                                   context,
                                 ),
@@ -247,12 +246,13 @@ class _WeekStripState extends State<WeekStrip> {
                           Text(
                             DateFormat('E').format(day).substring(0, 1),
                             style: GoogleFonts.inter(
-                              fontSize: 10,
+                              fontSize: 9,
                               fontWeight: FontWeight.w500,
                               color: textColor.withValues(alpha: 0.8),
+                              height: 1.0,
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 1),
                           Container(
                             width: 24,
                             height: 24,
@@ -279,10 +279,10 @@ class _WeekStripState extends State<WeekStrip> {
                           // Mood Icon below the date circle
                           if (mood != null)
                             Padding(
-                              padding: const EdgeInsets.only(top: 2),
+                              padding: const EdgeInsets.only(top: 1),
                               child: Icon(
                                 mood.moodType.icon,
-                                size: 10,
+                                size: 9,
                                 color: AppColors.getMoodLogColor(context),
                               ),
                             ),

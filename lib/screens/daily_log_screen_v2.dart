@@ -141,9 +141,8 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
   }
 
   // ==================== PERIOD FLOW SECTION ====================
-  // 1 tap to log period with intensity
+  // Clear distinction between starting a period vs logging daily flow
   Widget _buildPeriodFlowSection() {
-    final colorScheme = Theme.of(context).colorScheme;
     final periodsAsync = ref.watch(
       periodsStreamProvider(
         DateRange(
@@ -157,7 +156,7 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionHeader(
-          'Period Flow',
+          'Period',
           Icons.water_drop,
           AppColors.getPeriodColor(context),
         ),
@@ -165,128 +164,20 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
         periodsAsync.when(
           data: (periods) {
             final hasPeriod = periods.isNotEmpty;
-            final currentIntensity = hasPeriod
-                ? periods.first.flowIntensity
-                : null;
-
-            return Row(
-              children: [
-                _buildFlowChip(
-                  label: 'None',
-                  icon: Icons.close,
-                  isSelected: !hasPeriod,
-                  color: colorScheme.surfaceContainerHighest,
-                  onTap: hasPeriod
-                      ? () => _autoSave(() async {
-                          await ref
-                              .read(periodServiceProvider)
-                              .deletePeriod(periods.first.id);
-                        })
-                      : null,
-                ),
-                const SizedBox(width: 8),
-                _buildFlowChip(
-                  label: 'Light',
-                  icon: Icons.water_drop_outlined,
-                  isSelected: currentIntensity == FlowIntensity.light,
-                  color: AppColors.getPeriodColor(
-                    context,
-                  ).withValues(alpha: 0.4),
-                  onTap: () => _logOrUpdatePeriod(
-                    FlowIntensity.light,
-                    periods.isNotEmpty ? periods.first : null,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                _buildFlowChip(
-                  label: 'Medium',
-                  icon: Icons.water_drop,
-                  isSelected: currentIntensity == FlowIntensity.medium,
-                  color: AppColors.getPeriodColor(
-                    context,
-                  ).withValues(alpha: 0.7),
-                  onTap: () => _logOrUpdatePeriod(
-                    FlowIntensity.medium,
-                    periods.isNotEmpty ? periods.first : null,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                _buildFlowChip(
-                  label: 'Heavy',
-                  icon: Icons.water_drop,
-                  isSelected: currentIntensity == FlowIntensity.heavy,
-                  color: AppColors.getPeriodColor(context),
-                  onTap: () => _logOrUpdatePeriod(
-                    FlowIntensity.heavy,
-                    periods.isNotEmpty ? periods.first : null,
-                  ),
-                ),
-              ],
-            );
+            final period = hasPeriod ? periods.first : null;
+            
+            // Show different UI based on whether period exists
+            if (!hasPeriod) {
+              return _buildStartPeriodSection();
+            } else {
+              return _buildDailyFlowSection(period!);
+            }
           },
           loading: () => _buildLoadingChips(4),
           error: (e, _) => Text(
             'Error: ${e.toString()}',
             style: const TextStyle(fontSize: 10, color: Colors.grey),
           ),
-        ),
-
-        // Period Ended Today Button
-        Consumer(
-          builder: (context, ref, child) {
-            final currentPeriodAsync = ref.watch(
-              periodsStreamProvider(
-                DateRange(
-                  startDate: widget.selectedDate.subtract(
-                    const Duration(days: 15),
-                  ),
-                  endDate: widget.selectedDate.add(const Duration(days: 1)),
-                ),
-              ),
-            );
-
-            return currentPeriodAsync.when(
-              data: (periods) {
-                // Find if there is an ongoing period that hasn't ended yet
-                final ongoingPeriod = periods
-                    .where((p) => p.endDate == null)
-                    .firstOrNull;
-
-                if (ongoingPeriod == null) return const SizedBox.shrink();
-
-                return Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: OutlinedButton.icon(
-                    onPressed: () => _autoSave(() async {
-                      await ref
-                          .read(periodServiceProvider)
-                          .endPeriod(
-                            periodId: ongoingPeriod.id,
-                            endDate: widget.selectedDate,
-                          );
-                    }),
-                    icon: const Icon(Icons.check_circle_outline, size: 18),
-                    label: const Text('Period Ended Today'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.getPeriodColor(context),
-                      side: BorderSide(
-                        color: AppColors.getPeriodColor(context),
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                    ),
-                  ),
-                );
-              },
-              loading: () => const SizedBox.shrink(),
-              error: (_, _) => const SizedBox.shrink(),
-            );
-          },
         ),
       ],
     );
@@ -341,37 +232,209 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
     );
   }
 
-  Future<void> _logOrUpdatePeriod(
-    FlowIntensity intensity,
-    Period? existingPeriod,
-  ) async {
+  // Section shown when NO period exists - makes it clear user is STARTING a period
+  Widget _buildStartPeriodSection() {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.outline.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.info_outline,
+                size: 16,
+                color: colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'No period logged for this date',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Start period with flow:',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _buildFlowChip(
+                label: 'Light',
+                icon: Icons.water_drop_outlined,
+                isSelected: false,
+                color: AppColors.getPeriodColor(context).withValues(alpha: 0.4),
+                onTap: () => _startNewPeriod(FlowIntensity.light),
+              ),
+              const SizedBox(width: 8),
+              _buildFlowChip(
+                label: 'Medium',
+                icon: Icons.water_drop,
+                isSelected: false,
+                color: AppColors.getPeriodColor(context).withValues(alpha: 0.7),
+                onTap: () => _startNewPeriod(FlowIntensity.medium),
+              ),
+              const SizedBox(width: 8),
+              _buildFlowChip(
+                label: 'Heavy',
+                icon: Icons.water_drop,
+                isSelected: false,
+                color: AppColors.getPeriodColor(context),
+                onTap: () => _startNewPeriod(FlowIntensity.heavy),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Section shown when period EXISTS - makes it clear user is logging DAILY flow
+  Widget _buildDailyFlowSection(Period period) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final dateFormatter = DateFormat('MMM d');
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.getPeriodColor(context).withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.getPeriodColor(context).withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Period info
+          Row(
+            children: [
+              Icon(
+                Icons.water_drop,
+                size: 18,
+                color: AppColors.getPeriodColor(context),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  period.endDate == null
+                      ? 'Period started ${dateFormatter.format(period.startDate)} (ongoing)'
+                      : 'Period: ${dateFormatter.format(period.startDate)} - ${dateFormatter.format(period.endDate!)}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          
+          // Daily flow logging
+          Text(
+            'Today\'s flow intensity:',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _buildFlowChip(
+                label: 'None',
+                icon: Icons.close,
+                isSelected: false,
+                color: colorScheme.surfaceContainerHighest,
+                onTap: () => _deletePeriodOnDate(period.id),
+              ),
+              const SizedBox(width: 8),
+              _buildFlowChip(
+                label: 'Light',
+                icon: Icons.water_drop_outlined,
+                isSelected: period.flowIntensity == FlowIntensity.light,
+                color: AppColors.getPeriodColor(context).withValues(alpha: 0.4),
+                onTap: () => _logDailyFlow(FlowIntensity.light, period),
+              ),
+              const SizedBox(width: 8),
+              _buildFlowChip(
+                label: 'Medium',
+                icon: Icons.water_drop,
+                isSelected: period.flowIntensity == FlowIntensity.medium,
+                color: AppColors.getPeriodColor(context).withValues(alpha: 0.7),
+                onTap: () => _logDailyFlow(FlowIntensity.medium, period),
+              ),
+              const SizedBox(width: 8),
+              _buildFlowChip(
+                label: 'Heavy',
+                icon: Icons.water_drop,
+                isSelected: period.flowIntensity == FlowIntensity.heavy,
+                color: AppColors.getPeriodColor(context),
+                onTap: () => _logDailyFlow(FlowIntensity.heavy, period),
+              ),
+            ],
+          ),
+          
+          // End period button (only if ongoing)
+          if (period.endDate == null) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => _endPeriodOnDate(period.id),
+              icon: const Icon(Icons.check_circle_outline, size: 18),
+              label: const Text('Period Ended Today'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.getPeriodColor(context),
+                side: BorderSide(color: AppColors.getPeriodColor(context)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // Start a NEW period
+  Future<void> _startNewPeriod(FlowIntensity intensity) async {
     await _autoSave(() async {
       final periodService = ref.read(periodServiceProvider);
-
-      // 1. Save daily flow intensity (specific to this date)
+      
+      // Start period
+      await periodService.startPeriod(
+        startDate: widget.selectedDate,
+        intensity: intensity,
+      );
+      
+      // Log daily flow
       await periodService.saveDailyFlow(
         date: widget.selectedDate,
         intensity: intensity,
       );
-
-      // 2. Ensure period exists (start or continue) if not already
-      if (existingPeriod == null) {
-        // Check if yesterday had a period to determine if we should extend it or start new
-        // For now, simple start logic as per current implementation
-        await periodService.startPeriod(
-          startDate: widget.selectedDate,
-          intensity: intensity,
-        );
-      } else {
-        // If period exists, we don't necessarily need to update its overall intensity
-        // unless we want to keep the 'average' or 'max' there.
-        // For now, let's just make sure the daily flow is logged.
-
-        // Optional: Update period's overall intensity if this is heavier?
-        // Leaving as is for now to focus on daily tracking.
-      }
-
-      // Force UI refresh
+      
+      // Refresh UI
       ref.invalidate(
         periodsStreamProvider(
           DateRange(
@@ -380,7 +443,46 @@ class _DailyLogScreenV2State extends ConsumerState<DailyLogScreenV2> {
           ),
         ),
       );
-      // Also invalidate daily flow stream (to be added)
+    });
+  }
+
+  // Log daily flow for existing period
+  Future<void> _logDailyFlow(FlowIntensity intensity, Period period) async {
+    await _autoSave(() async {
+      final periodService = ref.read(periodServiceProvider);
+      
+      // Save daily flow intensity
+      await periodService.saveDailyFlow(
+        date: widget.selectedDate,
+        intensity: intensity,
+      );
+      
+      // Refresh UI
+      ref.invalidate(
+        periodsStreamProvider(
+          DateRange(
+            startDate: widget.selectedDate,
+            endDate: widget.selectedDate.add(const Duration(days: 1)),
+          ),
+        ),
+      );
+    });
+  }
+
+  // Delete period on this date
+  Future<void> _deletePeriodOnDate(String periodId) async {
+    await _autoSave(() async {
+      await ref.read(periodServiceProvider).deletePeriod(periodId);
+    });
+  }
+
+  // End period on this date
+  Future<void> _endPeriodOnDate(String periodId) async {
+    await _autoSave(() async {
+      await ref.read(periodServiceProvider).endPeriod(
+        periodId: periodId,
+        endDate: widget.selectedDate,
+      );
     });
   }
 

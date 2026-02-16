@@ -35,8 +35,8 @@ class NotificationService {
           NotificationChannel(
             channelGroupKey: 'lovely_channel_group',
             channelKey: 'lovely_channel',
-            channelName: 'Lovely Notifications',
-            channelDescription: 'Notifications for Lovely app',
+            channelName: 'Lunara Notifications',
+            channelDescription: 'Notifications for Lunara app',
             defaultColor: Color.fromARGB(255, 255, 111, 97), // Coral Sunset
             ledColor: Color.fromARGB(255, 255, 111, 97),
             importance: NotificationImportance.High,
@@ -47,7 +47,7 @@ class NotificationService {
         channelGroups: [
           NotificationChannelGroup(
             channelGroupKey: 'lovely_channel_group',
-            channelGroupName: 'Lovely',
+            channelGroupName: 'Lunara',
           ),
         ],
       );
@@ -340,7 +340,7 @@ class NotificationService {
       content: NotificationContent(
         id: DateTime.now().millisecond,
         channelKey: 'lovely_channel',
-        title: message.notification?.title ?? 'Lovely',
+        title: message.notification?.title ?? 'Lunara',
         body: message.notification?.body ?? '',
         notificationLayout: NotificationLayout.Default,
       ),

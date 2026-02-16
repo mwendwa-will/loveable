@@ -53,7 +53,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyC8gPbK-kEnUqDFMwOSvH1i7DuBGCQlBhw',
-    appId: '1:120681281186:android:92462ae537d34ba7f2c9fb',
+    appId: '1:120681281186:android:98ad8d3e0d415686f2c9fb',
     messagingSenderId: '120681281186',
     projectId: 'lovable-8e28b',
     storageBucket: 'lovable-8e28b.firebasestorage.app',
@@ -61,11 +61,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyCLIYdjzRz5UYKtRD_M7Pt8AOV2jjqssWs',
-    appId: '1:120681281186:ios:3643062638982379f2c9fb',
+    appId: '1:120681281186:ios:b622bd9933817049f2c9fb',
     messagingSenderId: '120681281186',
     projectId: 'lovable-8e28b',
     storageBucket: 'lovable-8e28b.firebasestorage.app',
-    iosBundleId: 'com.example.lovely',
+    iosBundleId: 'com.lunara.app',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -78,13 +78,13 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyCs45c252fa8rWuD_lGZS6K-mBhFqZgKCg',
-    appId: '1:120681281186:web:f9637a3aad5a9c95f2c9fb',
+    apiKey: 'AIzaSyBhfG7MO43NBxmqYv34eFRreIEGVnlm-Bc',
+    appId: '1:120681281186:web:b74ba25db60d9779f2c9fb',
     messagingSenderId: '120681281186',
     projectId: 'lovable-8e28b',
     authDomain: 'lovable-8e28b.firebaseapp.com',
     storageBucket: 'lovable-8e28b.firebasestorage.app',
-    measurementId: 'G-TY0BKYQWRP',
+    measurementId: 'G-ZQNVPRGRFY',
   );
 
 }

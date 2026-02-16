@@ -19,7 +19,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify welcome screen is displayed
-      expect(find.text('Welcome to Lovely'), findsOneWidget);
+      expect(find.text('Welcome to Lunara'), findsOneWidget);
       expect(find.text('Get Started'), findsOneWidget);
     });
 

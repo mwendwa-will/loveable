@@ -15,7 +15,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Welcome to Lovely'), findsOneWidget);
+      expect(find.text('Welcome to Lunara'), findsOneWidget);
       expect(
           find.text('Your journey to wellness and self-care starts here'),
           findsOneWidget);

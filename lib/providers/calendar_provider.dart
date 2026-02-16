@@ -121,9 +121,25 @@ class CalendarNotifier extends AsyncNotifier<CalendarState> {
 
   // Public method to change selected date
   void onDaySelected(DateTime selectedDay, DateTime focusedDay) {
-    state = AsyncData(
-      state.value!.copyWith(selectedDate: selectedDay, focusedDay: focusedDay),
-    );
+    final currentState = state.asData?.value;
+    if (currentState != null) {
+      state = AsyncData(
+        currentState.copyWith(
+          selectedDate: selectedDay,
+          focusedDay: focusedDay,
+        ),
+      );
+    }
+  }
+
+  // Update only focused day (for page changes)
+  void updateFocusedDay(DateTime focusedDay) {
+    final currentState = state.asData?.value;
+    if (currentState != null) {
+      state = AsyncData(
+        currentState.copyWith(focusedDay: focusedDay),
+      );
+    }
   }
 
   // Public method to refresh data (e.g. after adding a log)

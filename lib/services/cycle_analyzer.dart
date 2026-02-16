@@ -92,11 +92,11 @@ class CycleAnalyzer {
         return;
       }
 
-      // Cycle length can be stored as int or numeric; fall back to average_cycle_length or default 28
+      // Cycle length can be stored as int or numeric; fall back to default 28
       int cycleLength = 28;
       try {
         final raw =
-            userData['cycle_length'] ?? userData['average_cycle_length'];
+            userData['average_cycle_length'];
         if (raw is int) {
           cycleLength = raw;
         } else if (raw is double) {
@@ -156,7 +156,7 @@ class CycleAnalyzer {
       );
       final recentConfidence = _calculateConfidence(recentCycleLengths);
       final userData = await _engine.profileService.getUserData();
-      final baselineCycleLength = (userData?['cycle_length'] as int?) ?? 28;
+      final baselineCycleLength = (userData?['average_cycle_length'] as int?) ?? 28;
       final variability = _calculateVariability(recentCycleLengths);
       final cycleShifted = _detectCycleShift(
         baseline: baselineCycleLength.toDouble(),
@@ -168,7 +168,6 @@ class CycleAnalyzer {
         Duration(days: recentAverageCycleLength.round()),
       );
       await _engine.profileService.updateUserData({
-        'cycle_length': recentAverageCycleLength.round(),
         'average_cycle_length': recentAverageCycleLength.round(),
         'recent_average_cycle_length': recentAverageCycleLength,
         'baseline_cycle_length': baselineCycleLength.toDouble(),

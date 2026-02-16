@@ -108,7 +108,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Semantics(
-                    label: 'Lovely app logo',
+                    label: 'Lunara app logo',
                     child: FaIcon(
                       FontAwesomeIcons.heart,
                       color: Theme.of(context).colorScheme.primary,

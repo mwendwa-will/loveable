@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 import 'package:lunara/core/exceptions/app_exceptions.dart';
@@ -20,6 +21,10 @@ class PeriodRepository {
   PeriodRepository(this._client, this._userRepo);
 
   User? get _currentUser => _client.auth.currentUser;
+  
+  // Track last auto-close check to prevent excessive calls
+  static DateTime? _lastAutoCloseCheck;
+  static const _autoCloseCheckInterval = Duration(hours: 1);
 
   Future<List<Period>> getPeriods({int? limit}) async {
     final user = _currentUser;
@@ -61,12 +66,65 @@ class PeriodRepository {
   // Alias for analytics
   Future<List<Period>> getPeriodHistory() => getCompletedPeriods();
 
+  /// Auto-close periods that have exceeded the average period length
+  Future<void> _autoCloseStalePeriodsIfNeeded() async {
+    final user = _currentUser;
+    if (user == null) return;
+
+    // Check if we recently ran this (throttle to avoid excessive calls)
+    final now = DateTime.now();
+    if (_lastAutoCloseCheck != null && 
+        now.difference(_lastAutoCloseCheck!) < _autoCloseCheckInterval) {
+      return; // Skip if checked recently
+    }
+
+    try {
+      // Get user's average period length (default 7 days)
+      final userData = await _userRepo.getUserData();
+      final averagePeriodLength = userData?['average_period_length'] as int? ?? 7;
+      final maxPeriodLength = averagePeriodLength + 3; // Add 3 day buffer
+
+      // Get all ongoing periods
+      final ongoingPeriods = await _client
+          .from('periods')
+          .select()
+          .eq('user_id', user.id)
+          .isFilter('end_date', null);
+
+      for (final periodData in ongoingPeriods) {
+        final period = Period.fromJson(periodData);
+        final daysSinceStart = DateTime.now().difference(period.startDate).inDays;
+
+        // Auto-close if period has been going on too long
+        if (daysSinceStart >= maxPeriodLength) {
+          final autoEndDate = period.startDate.add(Duration(days: averagePeriodLength));
+          
+          await _client
+              .from('periods')
+              .update({'end_date': autoEndDate.toIso8601String()})
+              .eq('id', period.id)
+              .eq('user_id', user.id);
+          
+          debugPrint('Auto-closed stale period: ${period.id} (${daysSinceStart} days old)');
+        }
+      }
+      
+      // Update timestamp after successful check
+      _lastAutoCloseCheck = now;
+    } catch (e) {
+      debugPrint('Warning: Failed to auto-close stale periods: $e');
+    }
+  }
+
   Future<List<Period>> getPeriodsInRange({
     required DateTime startDate,
     required DateTime endDate,
   }) async {
     final user = _currentUser;
     if (user == null) throw AuthException.sessionExpired();
+
+    // Auto-close stale periods before fetching
+    await _autoCloseStalePeriodsIfNeeded();
 
     final lookbackDate = startDate.subtract(const Duration(days: 60));
 
@@ -94,6 +152,9 @@ class PeriodRepository {
     final user = _currentUser;
     if (user == null) throw AuthException.sessionExpired();
 
+    // Auto-close stale periods before fetching
+    await _autoCloseStalePeriodsIfNeeded();
+
     final response = await _client
         .from('periods')
         .select()
@@ -114,7 +175,7 @@ class PeriodRepository {
     final user = _currentUser;
     if (user == null) throw AuthException.sessionExpired();
 
-    // Auto-close old periods
+    // Auto-close ALL ongoing periods before starting new one
     try {
       final ongoingPeriods = await _client
           .from('periods')
@@ -124,20 +185,33 @@ class PeriodRepository {
 
       for (final periodData in ongoingPeriods) {
         final period = Period.fromJson(periodData);
-        final daysSinceStart = DateTime.now()
-            .difference(period.startDate)
-            .inDays;
-
-        if (daysSinceStart > 15) {
-          final autoEndDate = period.startDate.add(const Duration(days: 7));
-          await _client
-              .from('periods')
-              .update({'end_date': autoEndDate.toIso8601String()})
-              .eq('id', period.id)
-              .eq('user_id', user.id);
+        
+        // Close the ongoing period
+        // End it either at its natural duration or day before new period
+        final daysSinceStart = startDate.difference(period.startDate).inDays;
+        
+        DateTime autoEndDate;
+        if (daysSinceStart <= 0) {
+          // New period is on same day or before - end old period 1 day before
+          autoEndDate = startDate.subtract(const Duration(days: 1));
+        } else if (daysSinceStart > 10) {
+          // Period has been going on too long - cap at 7 days
+          autoEndDate = period.startDate.add(const Duration(days: 7));
+        } else {
+          // End it the day before new period starts
+          autoEndDate = startDate.subtract(const Duration(days: 1));
         }
+        
+        await _client
+            .from('periods')
+            .update({'end_date': autoEndDate.toIso8601String()})
+            .eq('id', period.id)
+            .eq('user_id', user.id);
       }
-    } catch (_) {}
+    } catch (e) {
+      // Don't fail if auto-close fails, but log it
+      debugPrint('Warning: Failed to auto-close ongoing periods: $e');
+    }
 
     // Record accuracy
     try {

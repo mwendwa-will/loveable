@@ -111,7 +111,7 @@ class HomeViewModel extends AsyncNotifier<HomeState> {
       notificationService.scheduleRecurringNotification(
         id: 2,
         title: 'How are you feeling today?',
-        body: 'Take a moment to log your wellness data in Lovely.',
+        body: 'Take a moment to log your wellness data in Lunara.',
         hour: 20, // 8 PM
         minute: 0,
         channelKey: 'lovely_channel',

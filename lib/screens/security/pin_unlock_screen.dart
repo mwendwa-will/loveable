@@ -139,7 +139,7 @@ class _PinUnlockScreenState extends State<PinUnlockScreen> {
               
               // Title
               Text(
-                'Lovely',
+                'Lunara',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),

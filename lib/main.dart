@@ -183,7 +183,15 @@ class _LovelyAppState extends ConsumerState<LovelyApp>
   final AppLinks _appLinks = AppLinks();
 
   void _setupDeepLinkListener() {
-    // Subscribe to initial link and subsequent links via AppLinks
+    // Handle initial link if app was opened via deep link
+    _appLinks.getInitialLink().then((Uri? uri) {
+      if (uri != null) {
+        debugPrint('Initial deep link: $uri');
+        _handleIncomingUri(uri.toString());
+      }
+    });
+    
+    // Subscribe to subsequent links via AppLinks
     _linkSub = _appLinks.uriLinkStream.listen(
       (Uri? uri) {
         if (uri != null) _handleIncomingUri(uri.toString());
@@ -220,6 +228,15 @@ class _LovelyAppState extends ConsumerState<LovelyApp>
         debugPrint(
           'Social login deep link captured - Supabase will handle the session',
         );
+        
+        // Navigate to root after social login
+        // AuthGate will check session and route to onboarding or home
+        Future.delayed(const Duration(milliseconds: 500), () {
+          final ctx = navigatorKey.currentContext;
+          if (ctx != null) {
+            Navigator.of(ctx).pushNamedAndRemoveUntil('/', (route) => false);
+          }
+        });
       }
     } catch (e) {
       debugPrint('Failed to handle deep link: $e');
@@ -375,7 +392,7 @@ class _LovelyAppState extends ConsumerState<LovelyApp>
     return MaterialApp(
       onGenerateRoute: AppRouter.onGenerateRoute,
       debugShowCheckedModeBanner: false,
-      title: 'Lovely',
+      title: 'Lunara',
       theme: ThemeData(
         colorScheme: lightColorScheme,
         scaffoldBackgroundColor: Colors.white,

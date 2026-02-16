@@ -72,19 +72,20 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          final selectedDate =
-              ref.read(calendarProvider).value?.selectedDate ?? DateTime.now();
-          Navigator.of(context)
-              .pushNamed(
-                AppRoutes.dailyLog,
-                arguments: {'selectedDate': selectedDate},
-              )
-              .then((_) => ref.refresh(calendarProvider));
-        },
-        label: const Text('Edit Log'),
-        icon: const Icon(Icons.edit),
+      floatingActionButton: calendarStateAsync.maybeWhen(
+        data: (state) => FloatingActionButton.extended(
+          onPressed: () {
+            Navigator.of(context)
+                .pushNamed(
+                  AppRoutes.dailyLog,
+                  arguments: {'selectedDate': state.selectedDate},
+                )
+                .then((_) => ref.refresh(calendarProvider));
+          },
+          label: const Text('Edit Log'),
+          icon: const Icon(Icons.edit),
+        ),
+        orElse: () => null,
       ),
     );
   }
@@ -111,9 +112,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         }
       },
       onPageChanged: (focusedDay) {
-        ref
-            .read(calendarProvider.notifier)
-            .onDaySelected(state.selectedDate, focusedDay);
+        // Defer state update to avoid updating during build
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref
+              .read(calendarProvider.notifier)
+              .updateFocusedDay(focusedDay);
+        });
       },
 
       // Styles
@@ -138,7 +142,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           shape: BoxShape.circle,
         ),
         markersMaxCount: 3,
+        cellMargin: const EdgeInsets.all(4),
       ),
+      rowHeight: 68,
 
       // Builders for custom day cells
       calendarBuilders: CalendarBuilders(
@@ -179,8 +185,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       bgColor = colorScheme.primary;
       textColor = colorScheme.onPrimary;
     } else if (hasPeriod) {
-      bgColor = AppColors.getMenstrualPhaseColor(context);
-      textColor = AppColors.getMenstrualTextColor(context);
+      bgColor = AppColors.getPeriodColor(context);
+      textColor = AppColors.getTextColorForBackground(bgColor);
     } else if (isOvulation) {
       // Flo uses text color + dashed border for Ovulation (using Gold as requested)
       textColor = AppColors.getOvulationDayColor(context);
@@ -189,9 +195,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       // Flo uses text color for Fertility window
       textColor = AppColors.getFollicularPhaseColor(context);
     } else if (isPredicted) {
-      // Subtle background for predicted
-      bgColor = AppColors.getLutealPhaseColor(context).withValues(alpha: 0.3);
-      textColor = AppColors.getPredictedTextColor(context);
+      // Distinct background for predicted periods
+      bgColor = AppColors.getPredictedPeriodColor(context);
+      textColor = AppColors.getTextColorForBackground(bgColor);
     } else if (isToday) {
       // Subtle circle for today but not selected
       bgColor = colorScheme.primary.withValues(alpha: 0.15);
@@ -202,12 +208,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final mood = state.moods[normalizedDate];
 
     return Container(
-      margin: const EdgeInsets.all(1),
+      width: 48,
+      height: 48,
+      margin: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: isSelected ? colorScheme.primary : bgColor,
         shape: BoxShape.circle,
         border: isToday && !isSelected
-            ? Border.all(color: colorScheme.primary, width: 1.5)
+            ? Border.all(color: colorScheme.primary, width: 2)
             : null,
       ),
       child: CustomPaint(
@@ -299,11 +307,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             runSpacing: 8,
             children: [
               _LegendItem(
-                color: AppColors.getMenstrualPhaseColor(context),
+                color: AppColors.getPeriodColor(context),
                 label: 'Period',
               ),
               _LegendItem(
-                color: AppColors.getLutealPhaseColor(context),
+                color: AppColors.getPredictedPeriodColor(context),
                 label: 'Predicted',
               ),
               _LegendItem(

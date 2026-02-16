@@ -12,7 +12,12 @@
           "package_name": "com.example.lovely"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "120681281186-cc2iue7u5nvg7am193es7ijtgbn8jhsu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyC8gPbK-kEnUqDFMwOSvH1i7DuBGCQlBhw"
@@ -20,7 +25,41 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "120681281186-cc2iue7u5nvg7am193es7ijtgbn8jhsu.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:120681281186:android:98ad8d3e0d415686f2c9fb",
+        "android_client_info": {
+          "package_name": "com.lunara.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "120681281186-cc2iue7u5nvg7am193es7ijtgbn8jhsu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC8gPbK-kEnUqDFMwOSvH1i7DuBGCQlBhw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "120681281186-cc2iue7u5nvg7am193es7ijtgbn8jhsu.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

@@ -27,12 +27,16 @@ class CycleCard extends StatelessWidget {
 
     if (lastPeriodStart != null) {
       final now = DateUtils.dateOnly(DateTime.now());
-      currentCycleDay = now.difference(lastPeriodStart!).inDays + 1;
+      final daysSinceLastPeriod = now.difference(lastPeriodStart!).inDays;
+      currentCycleDay = (daysSinceLastPeriod % averageCycleLength) + 1;
 
+      // Calculate the next upcoming predicted period date
+      final cyclesPassed = (daysSinceLastPeriod / averageCycleLength).ceil();
       final nextPeriodPredicted = lastPeriodStart!.add(
-        Duration(days: averageCycleLength),
+        Duration(days: cyclesPassed * averageCycleLength),
       );
       daysUntilPeriod = nextPeriodPredicted.difference(now).inDays;
+      // If daysUntilPeriod is 0, the period is due today; keep as 0
     }
 
     final cycleStatus = _getCycleStatus(
@@ -76,7 +80,7 @@ class CycleCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${DateTime.now().difference(currentPeriod!.startDate).inDays + 1}',
+                      '${(DateTime.now().difference(currentPeriod!.startDate).inDays % averageCycleLength) + 1}',
                       style: GoogleFonts.outfit(
                         fontSize: 72,
                         fontWeight: FontWeight.bold,

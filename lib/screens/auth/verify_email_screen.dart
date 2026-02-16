@@ -82,7 +82,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
                 // Description
                 Text(
-                  'We\'ve sent a confirmation link to ${widget.email ?? "your email"}.\n\nClick the link to verify your account and get started with Lovely.',
+                  'We\'ve sent a confirmation link to ${widget.email ?? "your email"}.\n\nClick the link to verify your account and get started with Lunara.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                     height: 1.6,

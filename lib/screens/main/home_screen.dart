@@ -94,7 +94,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                       ),
                       Text(
-                        'Lovely',
+                        'Lunara',
                         style: GoogleFonts.outfit(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
@@ -187,9 +187,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         // Daily Tip
                         DailyTipCard(
                           cycleDay: homeState.lastPeriodStart != null
-                              ? DateTime.now()
-                                        .difference(homeState.lastPeriodStart!)
-                                        .inDays +
+                              ? (DateTime.now()
+                                            .difference(homeState.lastPeriodStart!)
+                                            .inDays %
+                                        homeState.averageCycleLength) +
                                     1
                               : null,
                           avgCycleLength: homeState.averageCycleLength,

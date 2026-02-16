@@ -392,7 +392,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           context,
                           icon: FontAwesomeIcons.circleInfo,
                           iconColor: const Color(0xFF9C27B0),
-                          title: 'About Lovely',
+                          title: 'About Lunara',
                           subtitle: 'Version 1.0.0',
                           onTap: () {
                             _showAboutDialog(context);
@@ -1176,13 +1176,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('About Lovely'),
+        title: const Text('About Lunara'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Lovely',
+              'Lunara',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),

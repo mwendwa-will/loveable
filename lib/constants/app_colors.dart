@@ -104,16 +104,16 @@ class AppColors {
   static Color getPeriodColor(BuildContext context) {
     return getAdaptiveColor(
       context,
-      lightColor: Colors.red.shade400,
-      darkColor: Colors.red.shade300,
+      lightColor: const Color(0xFFEF5350), // Red 400 - vibrant but not harsh
+      darkColor: const Color(0xFFE57373), // Red 300 - softer for dark mode
     );
   }
 
   static Color getPredictedPeriodColor(BuildContext context) {
     return getAdaptiveColor(
       context,
-      lightColor: Colors.pink.shade100,
-      darkColor: Colors.pink.shade600,
+      lightColor: const Color(0xFFF48FB1), // Pink 200 - more visible than shade100
+      darkColor: const Color(0xFFEC407A), // Pink 400 - vibrant for dark mode
     );
   }
 
