@@ -228,7 +228,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           // Generate username from email (take part before @)
           username = email.split('@').first.toLowerCase();
           // Remove special characters and limit length
-          username = username!.replaceAll(RegExp(r'[^a-z0-9_]'), '_');
+          username = username.replaceAll(RegExp(r'[^a-z0-9_]'), '_');
           if (username.length > 15) {
             username = username.substring(0, 15);
           }

@@ -105,7 +105,7 @@ class PeriodRepository {
               .eq('id', period.id)
               .eq('user_id', user.id);
           
-          debugPrint('Auto-closed stale period: ${period.id} (${daysSinceStart} days old)');
+          debugPrint('Auto-closed stale period: ${period.id} ($daysSinceStart days old)');
         }
       }
       
